@@ -1,5 +1,5 @@
 /* Ensō 円相 — offline service worker */
-const CACHE = 'enso-v2';
+const CACHE = 'enso-v3';
 const ASSETS = [
   './',
   './index.html',

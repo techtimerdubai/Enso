@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" />
   <meta name="theme-color" content="#141418" />
+  <meta name="color-scheme" content="dark light" />
   <meta name="description" content="Ensō 円相 — a free infinite-canvas drawing app for web, Android & Apple. Sumi-e ink brush, mandala mode, time-lapse replay, personal ink-seal signature, and one-tap free sharing." />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -16,84 +18,84 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <canvas id="paper"></canvas>
+  <canvas id="paper" role="img" aria-label="Infinite drawing canvas. Draw with a pen, stylus, mouse or finger."></canvas>
 
   <!-- Brand -->
   <div id="brand" class="glass chrome">
     <span class="ring" aria-hidden="true"></span>
-    <span class="name"><b>Ensō</b><i>円相</i></span>
+    <span class="name"><b>Ensō</b><i lang="ja">円相</i></span>
   </div>
 
   <!-- Right rail: zoom + zen -->
   <div id="rail" class="chrome">
-    <button id="zenBtn" class="glass icon" title="Zen mode — hide everything (Z)">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+    <button id="zenBtn" class="glass icon" aria-label="Zen mode — hide interface" title="Zen mode — hide everything (Z)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
     </button>
-    <div id="hud" class="glass" title="Zoom — scroll or pinch">100%</div>
+    <button id="hud" class="glass" aria-label="Zoom level. Activate to fit drawing to screen." title="Zoom — click to fit (0)">100%</button>
   </div>
 
-  <!-- Toolbar -->
-  <div id="toolbar" class="glass chrome">
-    <button class="tool active" data-tool="brush" title="Ink brush (B)">
-      <svg viewBox="0 0 24 24"><path d="M6 3c3 3 3 8 3 11 0 2-1 4-3 4s-3-2-3-4c0-1 1-2 3-2M9 14c4-1 8-4 11-9"/></svg>
-    </button>
-    <button class="tool" data-tool="pen" title="Pen (P)">
-      <svg viewBox="0 0 24 24"><path d="M3 21l3.8-.9L20.5 6.4a2 2 0 0 0 0-2.8l-.1-.1a2 2 0 0 0-2.8 0L3.9 17.2 3 21z"/></svg>
-    </button>
-    <button class="tool" data-tool="marker" title="Highlighter (M)">
-      <svg viewBox="0 0 24 24"><path d="M4 20h16M6 16l8.5-8.5 3 3L9 19l-4 1 1-4z"/></svg>
-    </button>
-    <button class="tool" data-tool="eraser" title="Eraser (E)">
-      <svg viewBox="0 0 24 24"><path d="M4 15l7-7 6 6-4 4H8l-4-3zM14 8l4 4"/></svg>
-    </button>
-    <button class="tool" data-tool="pan" title="Pan / hand (H or hold Space)">
-      <svg viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V13m0-1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.2a4 4 0 0 1-3-1.4L6 16.5a1.5 1.5 0 0 1 2.2-2L9 15.3"/></svg>
-    </button>
-
-    <span class="sep"></span>
-    <div id="swatches"></div>
-    <span class="sep"></span>
-
-    <label id="size" title="Brush size"><input type="range" min="1" max="60" value="6" id="sizeRange" /></label>
-
-    <span class="sep"></span>
-    <button id="symBtn" class="tool" title="Mandala / symmetry mode (S)">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    <span class="sep"></span>
-    <button id="undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1"/></svg></button>
-    <button id="redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1"/></svg></button>
+  <!-- Bottom dock: tools + colours + size always visible -->
+  <div id="toolbar" class="glass chrome" role="toolbar" aria-label="Drawing tools">
+    <div class="row tools">
+      <button class="tool active" data-tool="brush" aria-label="Ink brush" aria-pressed="true" title="Ink brush (B)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3c3 3 3 8 3 11 0 2-1 4-3 4s-3-2-3-4c0-1 1-2 3-2M9 14c4-1 8-4 11-9"/></svg>
+      </button>
+      <button class="tool" data-tool="pen" aria-label="Pen" aria-pressed="false" title="Pen (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l3.8-.9L20.5 6.4a2 2 0 0 0 0-2.8l-.1-.1a2 2 0 0 0-2.8 0L3.9 17.2 3 21z"/></svg>
+      </button>
+      <button class="tool" data-tool="marker" aria-label="Highlighter" aria-pressed="false" title="Highlighter (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 16l8.5-8.5 3 3L9 19l-4 1 1-4z"/></svg>
+      </button>
+      <button class="tool" data-tool="eraser" aria-label="Eraser" aria-pressed="false" title="Eraser (E)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l7-7 6 6-4 4H8l-4-3zM14 8l4 4"/></svg>
+      </button>
+      <button id="stickerBtn" class="tool" aria-label="Stickers" title="Stickers ⭐">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
+      </button>
+      <button id="symBtn" class="tool" aria-label="Mandala symmetry mode" aria-pressed="false" title="Mandala / symmetry mode (S)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1"/></svg></button>
+      <button id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1"/></svg></button>
+      <button class="tool" data-tool="pan" aria-label="Pan / hand" aria-pressed="false" title="Pan / hand (H or hold Space)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V13m0-1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.2a4 4 0 0 1-3-1.4L6 16.5a1.5 1.5 0 0 1 2.2-2L9 15.3"/></svg>
+      </button>
+      <button id="menuBtn" class="tool" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="Menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+    <div class="row colors"><div id="swatches" role="group" aria-label="Colour"></div></div>
+    <div class="row size">
+      <label id="size"><span class="sr-only">Brush size</span><input type="range" min="1" max="60" value="8" id="sizeRange" aria-label="Brush size" /></label>
+    </div>
   </div>
-
-  <!-- Overflow button -->
-  <button id="menuBtn" class="glass chrome" title="Menu">
-    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
-  </button>
 
   <!-- Slide-up sheet -->
-  <div id="sheet" class="glass hidden">
+  <div id="sheet" class="glass hidden" role="menu" aria-label="More actions">
     <div class="sheet-grid">
-      <button data-act="share"><span>􀈂</span>Share</button>
-      <button data-act="replay"><span>▶</span>Replay</button>
-      <button data-act="seal"><span>印</span>Ink seal</button>
-      <button data-act="png"><span>⬇</span>PNG</button>
-      <button data-act="svg"><span>⬇</span>SVG (vector)</button>
-      <button data-act="home"><span>↺</span>Recenter</button>
-      <button data-act="theme"><span>◐</span>Paper</button>
-      <button data-act="grid"><span>▦</span>Grid</button>
-      <button data-act="symaxes"><span>❋</span>Axes: <em id="axesLabel">6</em></button>
-      <button data-act="clear" class="danger"><span>🗑</span>Clear</button>
+      <button data-act="share" role="menuitem"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span>Share</button>
+      <button data-act="replay" role="menuitem"><span aria-hidden="true">▶</span>Replay</button>
+      <button data-act="seal" role="menuitem"><span aria-hidden="true" lang="ja">印</span>Ink seal</button>
+      <button data-act="png" role="menuitem"><span aria-hidden="true">⬇</span>PNG</button>
+      <button data-act="svg" role="menuitem"><span aria-hidden="true">⬇</span>SVG (vector)</button>
+      <button data-act="fit" role="menuitem"><span aria-hidden="true">⤢</span>Fit to art</button>
+      <button data-act="home" role="menuitem"><span aria-hidden="true">↺</span>Recenter</button>
+      <button data-act="theme" role="menuitem"><span aria-hidden="true">◐</span>Paper</button>
+      <button data-act="grid" role="menuitem"><span aria-hidden="true">▦</span>Grid</button>
+      <button data-act="symaxes" role="menuitem"><span aria-hidden="true">❋</span>Axes: <em id="axesLabel">6</em></button>
+      <button data-act="clear" class="danger" role="menuitem"><span aria-hidden="true">🗑</span>Clear</button>
     </div>
-    <a class="ghlink" href="https://github.com/techtimerdubai/enso" target="_blank" rel="noopener">Ensō is free & open source — ★ on GitHub</a>
+    <a class="ghlink" href="https://github.com/techtimerdubai/enso" target="_blank" rel="noopener noreferrer">Ensō is free & open source — ★ on GitHub</a>
   </div>
 
   <!-- Seal maker modal -->
-  <div id="sealModal" class="modal hidden">
+  <div id="sealModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sealTitle">
     <div class="modal-card glass">
-      <h3>Your ink seal <i>印</i></h3>
+      <h3 id="sealTitle">Your ink seal <i lang="ja" aria-hidden="true">印</i></h3>
       <p class="muted">Type a name or word — Ensō carves a one-of-a-kind hanko stamp just for you.</p>
-      <input id="sealInput" type="text" maxlength="16" placeholder="e.g. 円相 · Aya · Kenji" />
-      <div class="seal-preview"><canvas id="sealCanvas" width="220" height="220"></canvas></div>
+      <input id="sealInput" type="text" maxlength="16" autocomplete="off" enterkeyhint="done" aria-label="Name or word for your seal" placeholder="e.g. 円相 · Aya · Kenji" />
+      <div class="seal-preview"><canvas id="sealCanvas" width="220" height="220" role="img" aria-label="Preview of your generated ink seal"></canvas></div>
       <div class="modal-actions">
         <button id="sealStamp" class="primary">Use as signature</button>
         <button id="sealDownload">Download</button>
@@ -103,16 +105,26 @@
     </div>
   </div>
 
-  <!-- Replay overlay -->
-  <div id="replayBar" class="glass hidden">
-    <button id="replayToggle" title="Pause/Play">⏸</button>
-    <input id="replaySeek" type="range" min="0" max="1000" value="0" />
-    <button id="replayRec" title="Record a video of the replay">● REC</button>
-    <button id="replayExit" title="Exit replay">✕</button>
+  <!-- Sticker picker modal -->
+  <div id="stickerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="stickerTitle">
+    <div class="modal-card glass">
+      <h3 id="stickerTitle">Stickers <span aria-hidden="true">⭐</span></h3>
+      <p class="muted">Pick a sticker, then tap the paper to place it. Pinch to make your drawing bigger or smaller.</p>
+      <div id="stickerGrid" class="sticker-grid"></div>
+      <div class="modal-actions"><button id="stickerClose" class="ghost">Close</button></div>
+    </div>
   </div>
 
-  <div id="toast" class="hidden"></div>
-  <div id="hint">Draw anywhere · pinch or scroll to zoom · two fingers or <kbd>Space</kbd> to pan</div>
+  <!-- Replay overlay -->
+  <div id="replayBar" class="glass hidden" role="group" aria-label="Replay controls">
+    <button id="replayToggle" aria-label="Pause or play replay" title="Pause / play">⏸</button>
+    <input id="replaySeek" type="range" min="0" max="1000" value="0" aria-label="Replay progress" />
+    <button id="replayRec" aria-label="Record a video of the replay" title="Record a video of the replay">● REC</button>
+    <button id="replayExit" aria-label="Exit replay" title="Exit replay">✕</button>
+  </div>
+
+  <div id="toast" class="hidden" role="status" aria-live="polite"></div>
+  <div id="hint" aria-hidden="true">Draw anywhere · pinch or scroll to zoom · <span class="kb-only">hold <kbd>Space</kbd> or </span>drag two fingers to pan</div>
 
   <script src="app.js"></script>
 </body>
