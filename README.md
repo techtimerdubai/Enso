@@ -89,9 +89,3 @@ python -m http.server 8080   # then open http://localhost:8080
 **MIT**
 
 Made with love. Now go fill the endless page! 🎨✨
-
-<div align="center">
-
-**Ideas by Aayansh 🌟 · Built by Papa 💛**
-
-</div>
