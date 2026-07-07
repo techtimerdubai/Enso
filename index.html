@@ -44,6 +44,9 @@
       <button class="tool" data-tool="eraser" aria-label="Eraser" aria-pressed="false" title="Eraser (E)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l7-7 6 6-4 4H8l-4-3zM14 8l4 4"/></svg>
       </button>
+      <button class="tool" data-tool="select" aria-label="Select / move" aria-pressed="false" title="Select &amp; move (V)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" stroke-dasharray="3 2.5"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      </button>
       <button id="stickerBtn" class="tool" aria-label="Stickers" title="Stickers ⭐">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
       </button>
@@ -127,6 +130,14 @@
     <input id="replaySeek" type="range" min="0" max="1000" value="0" aria-label="Replay progress" />
     <button id="replayRec" aria-label="Record a video of the replay" title="Record a video of the replay">● REC</button>
     <button id="replayExit" aria-label="Exit replay" title="Exit replay">✕</button>
+  </div>
+
+  <!-- Selection action bar -->
+  <div id="selBar" class="glass hidden" role="group" aria-label="Selection actions">
+    <span id="selCount">0 selected</span>
+    <button id="selDup" title="Duplicate (Ctrl+D)">⧉ Duplicate</button>
+    <button id="selDel" title="Delete (Del)">🗑 Delete</button>
+    <button id="selNone" title="Deselect (Esc)">✕</button>
   </div>
 
   <div id="toast" class="hidden" role="status" aria-live="polite"></div>

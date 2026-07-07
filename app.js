@@ -20,10 +20,11 @@
   let cacheValid = false;                 // is inkCv up to date for the current camera?
   const invalidate = () => { cacheValid = false; requestRender(); };
 
-  let strokes = [];          // committed items (strokes + stamps), in draw order
-  let opSizes = [];          // undo groups: how many items each committed action added
-  let redoStack = [];        // arrays of items
+  let strokes = [];          // committed items (strokes + stamps), in z / draw order
+  let undoStack = [];        // operation log: {type:'add'|'delete'|'move', items, dx?, dy?}
+  let redoStack = [];        // undone operations
   let live = null;           // stroke being drawn
+  let selection = new Set(); // currently selected items (select tool)
 
   const state = {
     tool: 'brush',
@@ -83,7 +84,6 @@
       if(s.tool==='stamp'){ strokes.push(makeStamp(s.dataURL, s.x, s.y, s.size)); }
       else { const st={ tool:s.tool, color:s.color, size:s.size, pts:s.pts.map(p=>({x:p[0],y:p[1],w:p[2]})) };
         finalizeBB(st); strokes.push(st); }
-      opSizes.push(1);
     }
   } catch(e){} }
 
@@ -148,6 +148,7 @@
       ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(inkCv, 0, 0);
     }
     if(state.sym) drawSymGuide();
+    if(state.tool==='select') drawSelectionOverlay();
   }
 
   function viewRect(){ const a=toWorld(0,0), b=toWorld(innerWidth,innerHeight);
@@ -323,6 +324,7 @@
       return;
     }
     if(isPan()){ panLast={x:e.clientX,y:e.clientY}; panVel.x=panVel.y=0; panT=performance.now(); document.body.classList.add('panning'); return; }
+    if(state.tool==='select'){ startSelect(e.clientX, e.clientY); return; }
 
     drawingId = e.pointerId; redoStack.length = 0;
     const w = toWorld(e.clientX, e.clientY);
@@ -342,6 +344,7 @@
       panVel.x = 0.75*panVel.x + 0.25*(dx/dt); panVel.y = 0.75*panVel.y + 0.25*(dy/dt);
       panLast={x:e.clientX,y:e.clientY}; invalidate(); saveSoon(); return;
     }
+    if(sel){ moveSelect(e.clientX, e.clientY); return; }
     if(drawingId===e.pointerId && live){
       const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
       const now = performance.now();
@@ -361,6 +364,7 @@
     pointers.delete(e.pointerId);
     if(pointers.size<2){ pinch=null; pinch0=null; }
 
+    if(sel){ endSelect(); }
     if(drawingId===e.pointerId){
       if(live && live.pts.length){ finalizeStroke(live); commit(state.sym ? [live, ...symCopies(live)] : [live]); }
       live=null; drawingId=null; requestRender();
@@ -471,17 +475,90 @@
     return [...out].sort((a,b)=>a.z-b.z);
   }
 
-  /* ---------------- undo / redo ---------------- */
-  function commit(items){
-    for(const it of items){ if(!it.bb) finalizeBB(it); }
-    strokes.push(...items); opSizes.push(items.length);
-    for(const it of items) gridAdd(it);
-    invalidate(); saveSoon();
+  /* ---------------- operation-based undo / redo ---------------- */
+  function pushOp(op){ undoStack.push(op); redoStack.length = 0; }
+  function addItems(items){ for(const it of items){ if(!it.bb) finalizeBB(it); strokes.push(it); gridAdd(it); } strokes.sort((a,b)=>a.z-b.z); }
+  function removeItems(items){ const set=new Set(items); strokes=strokes.filter(s=>!set.has(s)); for(const it of items){ gridRemove(it); selection.delete(it); } }
+  function translateItems(items, dx, dy){
+    for(const s of items){
+      gridRemove(s);
+      if(s.tool==='stamp'){ s.x+=dx; s.y+=dy; s.bb={minX:s.x-s.size/2,minY:s.y-s.size/2,maxX:s.x+s.size/2,maxY:s.y+s.size/2}; }
+      else { for(const p of s.pts){ p.x+=dx; p.y+=dy; } finalizeBB(s); }
+      gridAdd(s);
+    }
   }
-  function undo(){ if(!opSizes.length){ return; } const n=opSizes.pop(); const removed=strokes.splice(-n);
-    for(const it of removed) gridRemove(it); redoStack.push(removed); invalidate(); saveSoon(); }
-  function redo(){ if(!redoStack.length) return; const items=redoStack.pop(); strokes.push(...items); opSizes.push(items.length);
-    for(const it of items) gridAdd(it); invalidate(); saveSoon(); }
+  function commit(items){ addItems(items); pushOp({type:'add', items}); invalidate(); saveSoon(); }
+  function applyOp(op, forward){
+    if(op.type==='add')    forward ? addItems(op.items)    : removeItems(op.items);
+    else if(op.type==='delete') forward ? removeItems(op.items) : addItems(op.items);
+    else if(op.type==='move')   translateItems(op.items, forward?op.dx:-op.dx, forward?op.dy:-op.dy);
+  }
+  function undo(){ if(!undoStack.length) return; const op=undoStack.pop(); applyOp(op,false); redoStack.push(op); updateSelBar(); invalidate(); saveSoon(); }
+  function redo(){ if(!redoStack.length) return; const op=redoStack.pop(); applyOp(op,true); undoStack.push(op); updateSelBar(); invalidate(); saveSoon(); }
+
+  /* ---------------- selection (select / move tool) ---------------- */
+  let sel = null;   // active gesture {mode:'marquee'|'move', ...}
+  const worldToScreen = (wx,wy) => ({ x:(wx+cam.x)*cam.scale, y:(wy+cam.y)*cam.scale });
+  function selectionBBox(){ if(!selection.size) return null; let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+    for(const s of selection){ if(!s.bb) continue; a=Math.min(a,s.bb.minX);b=Math.min(b,s.bb.minY);c=Math.max(c,s.bb.maxX);d=Math.max(d,s.bb.maxY); }
+    return a===Infinity?null:{minX:a,minY:b,maxX:c,maxY:d}; }
+  function selectInRect(r){
+    const out=new Set(); const [x0,y0,x1,y1]=cellsOf(r); let cand;
+    if((x1-x0+1)*(y1-y0+1) > 6000) cand=strokes;
+    else { cand=new Set(); for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){ const st=grid.get(cx+','+cy); if(st) for(const it of st) cand.add(it); } for(const it of bigItems) cand.add(it); }
+    for(const s of cand){ if(s.bb && !(s.bb.maxX<r.minX||s.bb.minX>r.maxX||s.bb.maxY<r.minY||s.bb.minY>r.maxY)) out.add(s); }
+    return out;
+  }
+  function startSelect(sx,sy){
+    const w=toWorld(sx,sy), bb=selectionBBox();
+    if(selection.size && bb && w.x>=bb.minX && w.x<=bb.maxX && w.y>=bb.minY && w.y<=bb.maxY) sel={ mode:'move', lastX:sx, lastY:sy, dx:0, dy:0 };
+    else sel={ mode:'marquee', x0:sx, y0:sy, x1:sx, y1:sy };
+  }
+  function moveSelect(sx,sy){
+    if(!sel) return;
+    if(sel.mode==='marquee'){ sel.x1=sx; sel.y1=sy; requestRender(); }
+    else { const dxw=(sx-sel.lastX)/cam.scale, dyw=(sy-sel.lastY)/cam.scale;
+      translateItems([...selection], dxw, dyw); sel.dx+=dxw; sel.dy+=dyw; sel.lastX=sx; sel.lastY=sy; invalidate(); }
+  }
+  function endSelect(){
+    if(!sel) return;
+    if(sel.mode==='marquee'){
+      const a=toWorld(sel.x0,sel.y0), b=toWorld(sel.x1,sel.y1);
+      if(Math.hypot(sel.x1-sel.x0, sel.y1-sel.y0) < 5) selection.clear();
+      else selection = selectInRect({minX:Math.min(a.x,b.x),minY:Math.min(a.y,b.y),maxX:Math.max(a.x,b.x),maxY:Math.max(a.y,b.y)});
+      updateSelBar(); requestRender();
+    } else if(Math.hypot(sel.dx*cam.scale, sel.dy*cam.scale) > 1){ pushOp({type:'move', items:[...selection], dx:sel.dx, dy:sel.dy}); saveSoon(); }
+    sel=null;
+  }
+  function clearSelection(){ if(selection.size){ selection.clear(); updateSelBar(); requestRender(); } }
+  function deleteSelection(){ if(!selection.size) return; const items=[...selection]; removeItems(items); pushOp({type:'delete', items}); selection.clear(); updateSelBar(); invalidate(); saveSoon(); buzz(12); }
+  function cloneItem(s){ return s.tool==='stamp' ? {tool:'stamp',dataURL:s.dataURL,x:s.x,y:s.y,size:s.size,_img:s._img}
+    : {tool:s.tool,color:s.color,size:s.size,pts:s.pts.map(p=>({x:p.x,y:p.y,w:p.w}))}; }
+  function duplicateSelection(){ if(!selection.size) return; const off=14/cam.scale;
+    const clones=[...selection].map(s=>{ const c=cloneItem(s);
+      if(c.tool==='stamp'){ c.x+=off; c.y+=off; c.bb={minX:c.x-c.size/2,minY:c.y-c.size/2,maxX:c.x+c.size/2,maxY:c.y+c.size/2}; }
+      else { for(const p of c.pts){ p.x+=off; p.y+=off; } finalizeBB(c); } return c; });
+    addItems(clones); pushOp({type:'add', items:clones}); selection=new Set(clones); updateSelBar(); invalidate(); saveSoon(); buzz(10); }
+  const selBar=document.getElementById('selBar'), selCount=document.getElementById('selCount');
+  function updateSelBar(){ const n=selection.size; if(selBar) selBar.classList.toggle('hidden', n===0 || state.tool!=='select'); if(selCount) selCount.textContent = n+(n===1?' selected':' selected'); }
+  document.getElementById('selDup').addEventListener('click', ()=>{ duplicateSelection(); });
+  document.getElementById('selDel').addEventListener('click', ()=>{ deleteSelection(); });
+  document.getElementById('selNone').addEventListener('click', ()=>{ clearSelection(); });
+  function drawSelectionOverlay(){
+    ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(sel && sel.mode==='marquee'){
+      const x=Math.min(sel.x0,sel.x1), y=Math.min(sel.y0,sel.y1), w=Math.abs(sel.x1-sel.x0), h=Math.abs(sel.y1-sel.y0);
+      ctx.fillStyle='rgba(143,178,255,.12)'; ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle='rgba(143,178,255,.95)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
+    }
+    const bb=selectionBBox();
+    if(bb){ const p0=worldToScreen(bb.minX,bb.minY), p1=worldToScreen(bb.maxX,bb.maxY);
+      ctx.strokeStyle='#e0503a'; ctx.lineWidth=2; ctx.setLineDash([7,5]);
+      ctx.strokeRect(p0.x-3,p0.y-3,(p1.x-p0.x)+6,(p1.y-p0.y)+6); ctx.setLineDash([]);
+      ctx.fillStyle='#e0503a'; for(const [hx,hy] of [[p0.x-3,p0.y-3],[p1.x+3,p0.y-3],[p0.x-3,p1.y+3],[p1.x+3,p1.y+3]]){ ctx.beginPath(); ctx.arc(hx,hy,4.5,0,7); ctx.fill(); }
+    }
+    ctx.restore();
+  }
 
   /* ---------------- pinch / wheel zoom + inertia ---------------- */
   const panVel = { x:0, y:0 }; let panT = 0, inertiaRAF = 0;
@@ -611,7 +688,9 @@
     document.querySelectorAll('.tool[data-tool]').forEach(b=>{ const on=b.dataset.tool===tool; b.classList.toggle('active',on); b.setAttribute('aria-pressed', on?'true':'false'); });
     document.body.classList.toggle('pan', tool==='pan');
     document.body.classList.toggle('erase', tool==='eraser');
-    updateBrushDot();
+    document.body.classList.toggle('select', tool==='select');
+    if(tool!=='select'){ selection.clear(); sel=null; }
+    updateSelBar(); updateBrushDot(); requestRender();
   }
   function updateBrushDot(){ brushDot.style.background = state.rainbow
     ? 'conic-gradient(from 0deg,#ff4d4f,#ffd21a,#37c86b,#20b8e6,#9a5bff,#ff4d4f)' : state.color; }
@@ -663,7 +742,7 @@
     else if(a==='seal') openSeal();
     else if(a==='sticker') openStickers();
     else if(a==='install') doInstall();
-    else if(a==='clear'){ if(confirm('Clear the whole canvas? This cannot be undone.')){ strokes=[];opSizes=[];redoStack=[];gridRebuild();invalidate();save(); toast('Fresh paper ✨'); } }
+    else if(a==='clear'){ if(confirm('Clear the whole canvas? This cannot be undone.')){ strokes=[];undoStack=[];redoStack=[];selection.clear();updateSelBar();gridRebuild();invalidate();save(); toast('Fresh paper ✨'); } }
   }));
   const axesLabel=document.getElementById('axesLabel');
   function cycleAxes(){ const opts=[2,3,4,6,8,12]; state.axes=opts[(opts.indexOf(state.axes)+1)%opts.length];
@@ -857,16 +936,19 @@
     if(e.target && /input|textarea/i.test(e.target.tagName)) return;
     if(e.code==='Space' && !spaceDown){ spaceDown=true; document.body.classList.add('pan'); return; }
     if(e.ctrlKey||e.metaKey){ const k=e.key.toLowerCase();
-      if(k==='z'&&!e.shiftKey){ e.preventDefault(); undo(); } else if((k==='z'&&e.shiftKey)||k==='y'){ e.preventDefault(); redo(); } return; }
+      if(k==='z'&&!e.shiftKey){ e.preventDefault(); undo(); } else if((k==='z'&&e.shiftKey)||k==='y'){ e.preventDefault(); redo(); }
+      else if(k==='d'){ e.preventDefault(); duplicateSelection(); } return; }
+    if((e.key==='Delete'||e.key==='Backspace') && selection.size){ e.preventDefault(); deleteSelection(); return; }
     const k=e.key.toLowerCase();
     if(k==='b') selectTool('brush'); else if(k==='p') selectTool('pen');
     else if(k==='m') selectTool('marker'); else if(k==='e') selectTool('eraser');
+    else if(k==='v') selectTool('select');
     else if(k==='h') selectTool('pan'); else if(k==='z') toggleZen();
     else if(k==='s') symBtn.click();
     else if(k==='+'||k==='=') zoomAt(innerWidth/2,innerHeight/2,1.2), invalidate();
     else if(k==='-'||k==='_') zoomAt(innerWidth/2,innerHeight/2,1/1.2), invalidate();
     else if(k==='0') zoomToFit();
-    else if(k==='escape'){ if(anyOverlay()) closeAllOverlays(); }
+    else if(k==='escape'){ if(anyOverlay()) closeAllOverlays(); else clearSelection(); }
   });
   addEventListener('keyup', e=>{ if(e.code==='Space'){ spaceDown=false; if(state.tool!=='pan') document.body.classList.remove('pan'); } });
 

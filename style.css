@@ -163,6 +163,16 @@ body.eyedrop #paper{cursor:crosshair}
 #replaySeek::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
 #replaySeek::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:var(--accent);cursor:pointer}
 
+/* Selection action bar */
+#selBar{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);
+  z-index:9;display:flex;align-items:center;gap:8px;padding:7px 10px 7px 14px}
+#selBar #selCount{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+#selBar button{background:rgba(255,255,255,.06);border:1px solid var(--brd);color:var(--fg);font-size:13px;
+  cursor:pointer;padding:7px 11px;border-radius:10px;min-height:36px}
+#selBar button:hover{background:rgba(255,255,255,.13)}
+#selBar #selDel:hover{background:rgba(224,80,58,.22)}
+body.select #paper{cursor:crosshair}
+
 /* Toast + hint */
 #toast{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);
   background:var(--glass-2);border:1px solid var(--brd);border-radius:12px;padding:10px 16px;font-size:13.5px;
