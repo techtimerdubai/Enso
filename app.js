@@ -193,6 +193,8 @@
       count += len;
       if(revealHere <= 0){ if(upTo!==Infinity && count > upTo) break; else continue; }
       if(s.bb && (s.bb.maxX < vr.minX-pad || s.bb.minX > vr.maxX+pad || s.bb.maxY < vr.minY-pad || s.bb.minY > vr.maxY+pad)) continue;
+      // LOD: skip items too small to see at the current zoom (huge win on big, zoomed-out docs)
+      if(s.bb && (s.bb.maxX-s.bb.minX)*cam.scale < 0.6 && (s.bb.maxY-s.bb.minY)*cam.scale < 0.6) continue;
       if(s.tool==='stamp') drawStampItem(target, s);
       else drawStroke(target, s, revealHere < len ? Math.ceil(revealHere) : 0, clip);
     }
@@ -221,9 +223,18 @@
      `clip` (world rect) limits geometry to the visible area so device coordinates
      stay small — this keeps rendering sharp AND correct at extreme zoom, where an
      un-clipped off-screen vertex would exceed the canvas coordinate limit. */
+  // Level-of-detail: drop points closer than ~0.7 screen px so a stroke drawn at
+  // full detail uses far fewer vertices when the view is zoomed out (keeps first/last).
+  function decimate(pts, minD){
+    if(pts.length<=2 || minD<=0.02) return pts;
+    const out=[pts[0]]; let last=pts[0];
+    for(let i=1;i<pts.length-1;i++){ if(Math.hypot(pts[i].x-last.x,pts[i].y-last.y)>=minD){ out.push(pts[i]); last=pts[i]; } }
+    out.push(pts[pts.length-1]); return out;
+  }
   function drawStroke(target, s, partial, clip){
-    const src = partial ? s.pts.slice(0, partial) : s.pts;
+    let src = partial ? s.pts.slice(0, partial) : s.pts;
     if(!src.length) return;
+    src = decimate(src, 0.7/cam.scale);
     const st = STYLES[s.tool];
     const runs = clip ? clipRuns(src, clip) : [src];
     if(st && st.neon){ drawNeon(target, s, runs); return; }
