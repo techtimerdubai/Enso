@@ -82,6 +82,7 @@
       <button data-act="home" role="menuitem"><span aria-hidden="true">↺</span>Recenter</button>
       <button data-act="theme" role="menuitem"><span aria-hidden="true">◐</span>Paper</button>
       <button data-act="grid" role="menuitem"><span aria-hidden="true">▦</span>Grid</button>
+      <button data-act="layers" role="menuitem"><span aria-hidden="true">▤</span>Layers</button>
       <button data-act="symaxes" role="menuitem"><span aria-hidden="true">❋</span>Axes: <em id="axesLabel">6</em></button>
       <button data-act="clear" class="danger" role="menuitem"><span aria-hidden="true">🗑</span>Clear</button>
     </div>
@@ -101,6 +102,19 @@
         <button id="sealClose" class="ghost">Close</button>
       </div>
       <p class="muted tiny">After “Use as signature”, tap anywhere on the canvas to stamp it.</p>
+    </div>
+  </div>
+
+  <!-- Layers panel -->
+  <div id="layerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="layerTitle">
+    <div class="modal-card glass">
+      <h3 id="layerTitle">Layers <span aria-hidden="true">▤</span></h3>
+      <p class="muted">New drawings go on the highlighted layer. Toggle 👁, fade with the slider, reorder or delete.</p>
+      <div id="layerList" class="layer-list"></div>
+      <div class="modal-actions">
+        <button id="layerAdd" class="primary">＋ New layer</button>
+        <button id="layerClose" class="ghost">Close</button>
+      </div>
     </div>
   </div>
 

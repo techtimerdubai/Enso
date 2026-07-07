@@ -132,6 +132,17 @@ body.eyedrop #paper{cursor:crosshair}
 .modal-actions .primary:hover{background:var(--accent-2)}
 .modal-actions .ghost{background:transparent}
 
+/* Layers panel */
+.layer-list{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:44dvh;overflow-y:auto}
+.layer-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--brd);border-radius:11px;background:rgba(255,255,255,.04)}
+.layer-row.active{border-color:var(--accent);background:rgba(224,80,58,.14)}
+.layer-row button{background:transparent;border:none;color:var(--fg);cursor:pointer;font-size:15px;padding:4px;border-radius:8px;min-width:30px;min-height:30px}
+.layer-row button:hover{background:rgba(255,255,255,.1)}
+.layer-row .lyr-name{flex:1;text-align:left;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-row.active .lyr-name{color:var(--accent);font-weight:600}
+.layer-row .lyr-op{width:66px;flex:0 0 auto}
+.layer-row .lyr-del:hover{background:rgba(224,80,58,.22)}
+
 /* Brush button indicator + picker */
 #brushBtn{position:relative}
 .brush-dot{position:absolute;right:5px;bottom:5px;width:8px;height:8px;border-radius:50%;

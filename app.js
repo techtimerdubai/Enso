@@ -25,6 +25,9 @@
   let redoStack = [];        // undone operations
   let live = null;           // stroke being drawn
   let selection = new Set(); // currently selected items (select tool)
+  let layers = [{ id:1, name:'Layer 1', visible:true, opacity:1 }];   // bottom → top
+  let activeLayer = 1, nextLayerId = 2;
+  const layerById = id => layers.find(l => l.id===id) || layers[0];
 
   const state = {
     tool: 'brush',
@@ -69,20 +72,21 @@
   const KEY = 'enso.doc.v2';
   let quotaWarned = false;
   const save = () => { try {
-    localStorage.setItem(KEY, JSON.stringify({ strokes: serialize(strokes), cam,
+    localStorage.setItem(KEY, JSON.stringify({ strokes: serialize(strokes), cam, layers, activeLayer, nextLayerId,
       state:{ theme:state.theme, grid:state.grid, axes:state.axes } }));
   } catch(e){ if(!quotaWarned){ quotaWarned = true; toast('Storage full — older work may not auto-save. Export to keep it.'); } } };
   const saveSoon = debounce(save, 400);
   function serialize(list){ return list.map(s => s.tool==='stamp'
-    ? { tool:'stamp', dataURL:s.dataURL, x:r2(s.x), y:r2(s.y), size:r2(s.size) }
-    : { tool:s.tool, color:s.color, size:s.size, pts:s.pts.map(p=>[r2(p.x),r2(p.y),r2(p.w)]) }); }
+    ? { tool:'stamp', dataURL:s.dataURL, x:r2(s.x), y:r2(s.y), size:r2(s.size), layer:s.layer }
+    : { tool:s.tool, color:s.color, size:s.size, layer:s.layer, pts:s.pts.map(p=>[r2(p.x),r2(p.y),r2(p.w)]) }); }
   function load(){ try {
     const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if(!d) return;
     if(d.cam) Object.assign(cam, d.cam);
     if(d.state){ state.theme=d.state.theme||state.theme; state.grid=d.state.grid!==false; state.axes=d.state.axes||6; }
+    if(Array.isArray(d.layers) && d.layers.length){ layers=d.layers; activeLayer=d.activeLayer||layers[0].id; nextLayerId=d.nextLayerId||(Math.max(...layers.map(l=>l.id))+1); }
     if(Array.isArray(d.strokes)) for(const s of d.strokes){
-      if(s.tool==='stamp'){ strokes.push(makeStamp(s.dataURL, s.x, s.y, s.size)); }
-      else { const st={ tool:s.tool, color:s.color, size:s.size, pts:s.pts.map(p=>({x:p[0],y:p[1],w:p[2]})) };
+      if(s.tool==='stamp'){ const st=makeStamp(s.dataURL, s.x, s.y, s.size); st.layer=s.layer||layers[0].id; strokes.push(st); }
+      else { const st={ tool:s.tool, color:s.color, size:s.size, layer:s.layer||layers[0].id, pts:s.pts.map(p=>({x:p[0],y:p[1],w:p[2]})) };
         finalizeBB(st); strokes.push(st); }
     }
   } catch(e){} }
@@ -109,8 +113,23 @@
   // Because this runs on every camera change, strokes stay pixel-sharp at any zoom level.
   function rebuildInk(){
     kctx.setTransform(1,0,0,1,0,0); kctx.clearRect(0,0,inkCv.width,inkCv.height);
-    worldTransform(kctx);
-    drawScene(kctx, visibleStrokes(), Infinity);   // only strokes near the viewport
+    const vis = visibleStrokes();                  // z-sorted, viewport-culled
+    if(layers.length===1){                         // fast path: single layer
+      const L=layers[0];
+      if(L.visible){ worldTransform(kctx); drawScene(kctx, vis, Infinity); }
+      cacheValid = true; return;
+    }
+    // group visible items by layer, then composite each layer with its opacity so
+    // an eraser only affects its own layer (isolated via the overCv temp)
+    const byLayer = new Map();
+    for(const s of vis){ const id=s.layer||layers[0].id; (byLayer.get(id) || byLayer.set(id,[]).get(id)).push(s); }
+    for(const L of layers){
+      if(!L.visible) continue;
+      const items = byLayer.get(L.id); if(!items || !items.length) continue;
+      octx.setTransform(1,0,0,1,0,0); octx.clearRect(0,0,overCv.width,overCv.height);
+      worldTransform(octx); drawScene(octx, items, Infinity);
+      kctx.setTransform(1,0,0,1,0,0); kctx.globalAlpha = L.opacity; kctx.drawImage(overCv,0,0); kctx.globalAlpha = 1;
+    }
     cacheValid = true;
   }
 
@@ -329,7 +348,7 @@
     drawingId = e.pointerId; redoStack.length = 0;
     const w = toWorld(e.clientX, e.clientY);
     const col = state.rainbow ? nextRainbow() : state.color;
-    live = { tool:state.tool, color:col, size:state.size, pts:[], _t:performance.now() };
+    live = { tool:state.tool, color:col, size:state.size, layer:activeLayer, pts:[], _t:performance.now() };
     addPoint(live, w.x, w.y, pressure(e), 0);
     hideHint(); requestRender();
   });
@@ -431,7 +450,7 @@
       if(k===0 && mir===1) continue;
       const a=k*2*Math.PI/N, cos=Math.cos(a), sin=Math.sin(a);
       const pts=stroke.pts.map(p=>{ const y=mir*p.y; return { x:p.x*cos - y*sin, y:p.x*sin + y*cos, w:p.w }; });
-      const c={ tool:stroke.tool, color:stroke.color, size:stroke.size, pts };
+      const c={ tool:stroke.tool, color:stroke.color, size:stroke.size, layer:stroke.layer, pts };
       if(stroke.bb) finalizeBB(c);
       out.push(c);
     }
@@ -532,8 +551,8 @@
   }
   function clearSelection(){ if(selection.size){ selection.clear(); updateSelBar(); requestRender(); } }
   function deleteSelection(){ if(!selection.size) return; const items=[...selection]; removeItems(items); pushOp({type:'delete', items}); selection.clear(); updateSelBar(); invalidate(); saveSoon(); buzz(12); }
-  function cloneItem(s){ return s.tool==='stamp' ? {tool:'stamp',dataURL:s.dataURL,x:s.x,y:s.y,size:s.size,_img:s._img}
-    : {tool:s.tool,color:s.color,size:s.size,pts:s.pts.map(p=>({x:p.x,y:p.y,w:p.w}))}; }
+  function cloneItem(s){ return s.tool==='stamp' ? {tool:'stamp',dataURL:s.dataURL,x:s.x,y:s.y,size:s.size,layer:s.layer,_img:s._img}
+    : {tool:s.tool,color:s.color,size:s.size,layer:s.layer,pts:s.pts.map(p=>({x:p.x,y:p.y,w:p.w}))}; }
   function duplicateSelection(){ if(!selection.size) return; const off=14/cam.scale;
     const clones=[...selection].map(s=>{ const c=cloneItem(s);
       if(c.tool==='stamp'){ c.x+=off; c.y+=off; c.bb={minX:c.x-c.size/2,minY:c.y-c.size/2,maxX:c.x+c.size/2,maxY:c.y+c.size/2}; }
@@ -742,7 +761,10 @@
     else if(a==='seal') openSeal();
     else if(a==='sticker') openStickers();
     else if(a==='install') doInstall();
-    else if(a==='clear'){ if(confirm('Clear the whole canvas? This cannot be undone.')){ strokes=[];undoStack=[];redoStack=[];selection.clear();updateSelBar();gridRebuild();invalidate();save(); toast('Fresh paper ✨'); } }
+    else if(a==='layers') openLayers();
+    else if(a==='clear'){ if(confirm('Clear the whole canvas? This cannot be undone.')){ strokes=[];undoStack=[];redoStack=[];selection.clear();updateSelBar();
+      layers=[{id:1,name:'Layer 1',visible:true,opacity:1}]; activeLayer=1; nextLayerId=2;
+      gridRebuild();invalidate();save(); toast('Fresh paper ✨'); } }
   }));
   const axesLabel=document.getElementById('axesLabel');
   function cycleAxes(){ const opts=[2,3,4,6,8,12]; state.axes=opts[(opts.indexOf(state.axes)+1)%opts.length];
@@ -781,7 +803,7 @@
     redoStack.length=0; commit([st]); clearPendingStamp(); buzz(14); requestRender();
   }
   function makeStamp(dataURL, x, y, size, img){
-    const st={ tool:'stamp', dataURL, x, y, size };
+    const st={ tool:'stamp', dataURL, x, y, size, layer:activeLayer };
     st.bb={minX:x-size/2,minY:y-size/2,maxX:x+size/2,maxY:y+size/2};
     st._img = img || (()=>{ const im=new Image(); im.onload=()=>{ invalidate(); }; im.src=dataURL; return im; })();
     return st;
@@ -921,10 +943,10 @@
   /* ---------------- Android back button closes overlays ---------------- */
   let guardActive=false;
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
-      || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden')
+      || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
       || replay.active || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden');
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden');
     if(replay.active) exitReplay(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
@@ -972,6 +994,44 @@
   let toastT; function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); t.style.opacity='1';
     clearTimeout(toastT); toastT=setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.classList.add('hidden'),300); }, 1900); }
   let hintT=setTimeout(hideHint,6500); function hideHint(){ const h=document.getElementById('hint'); if(h) h.style.opacity='0'; clearTimeout(hintT); }
+
+  /* ---------------- layers panel ---------------- */
+  const layerModal=document.getElementById('layerModal'), layerList=document.getElementById('layerList');
+  function openLayers(){ renderLayers(); layerModal.classList.remove('hidden'); pushGuard(); }
+  document.getElementById('layerClose').addEventListener('click',()=>layerModal.classList.add('hidden'));
+  document.getElementById('layerAdd').addEventListener('click', addLayer);
+  layerModal.addEventListener('click', e=>{ if(e.target===layerModal) layerModal.classList.add('hidden'); });
+  function addLayer(){ const L={ id:nextLayerId++, name:'Layer '+(layers.length+1), visible:true, opacity:1 };
+    layers.push(L); activeLayer=L.id; renderLayers(); saveSoon(); buzz(6); }
+  function moveLayer(idx, dir){ const t=idx+dir; if(t<0||t>=layers.length) return;
+    const tmp=layers[idx]; layers[idx]=layers[t]; layers[t]=tmp; renderLayers(); invalidate(); saveSoon(); }
+  function deleteLayer(L){
+    if(layers.length<=1){ toast('Keep at least one layer'); return; }
+    const items=strokes.filter(s=>(s.layer||layers[0].id)===L.id);
+    if(items.length && !confirm(`Delete “${L.name}” and its ${items.length} drawing${items.length>1?'s':''}?`)) return;
+    if(items.length) removeItems(items);
+    layers=layers.filter(x=>x!==L);
+    if(activeLayer===L.id) activeLayer=layers[layers.length-1].id;
+    undoStack=[]; redoStack=[];             // avoid undo referencing a removed layer
+    renderLayers(); updateSelBar(); invalidate(); saveSoon();
+  }
+  function renderLayers(){
+    layerList.innerHTML='';
+    for(let i=layers.length-1;i>=0;i--){                 // top layer first
+      const L=layers[i];
+      const row=document.createElement('div'); row.className='layer-row'+(L.id===activeLayer?' active':'');
+      const eye=document.createElement('button'); eye.className='lyr-eye'; eye.title='Show / hide'; eye.textContent=L.visible?'👁':'🙈';
+      eye.onclick=()=>{ L.visible=!L.visible; renderLayers(); invalidate(); saveSoon(); };
+      const name=document.createElement('button'); name.className='lyr-name'; name.textContent=L.name; name.title='Tap to draw on this layer';
+      name.onclick=()=>{ activeLayer=L.id; renderLayers(); saveSoon(); };
+      const op=document.createElement('input'); op.className='lyr-op'; op.type='range'; op.min=0; op.max=100; op.value=Math.round(L.opacity*100); op.title='Opacity'; op.setAttribute('aria-label','Layer opacity');
+      op.oninput=()=>{ L.opacity=+op.value/100; invalidate(); saveSoon(); };
+      const up=document.createElement('button'); up.className='lyr-up'; up.title='Move up'; up.textContent='▲'; up.onclick=()=>moveLayer(i,1);
+      const dn=document.createElement('button'); dn.className='lyr-down'; dn.title='Move down'; dn.textContent='▼'; dn.onclick=()=>moveLayer(i,-1);
+      const del=document.createElement('button'); del.className='lyr-del'; del.title='Delete layer'; del.textContent='🗑'; del.onclick=()=>deleteLayer(L);
+      row.append(eye,name,op,up,dn,del); layerList.appendChild(row);
+    }
+  }
 
   /* ---------------- install (Add to Home screen / desktop shortcut) ---------------- */
   let deferredPrompt = null;
