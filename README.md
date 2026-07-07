@@ -13,8 +13,6 @@ Draw, sketch and think without edges — then share it in one tap, for free.
 
 *Ensō* (円相) is the Zen circle painted in a single breath — a symbol of **infinity, the void, and the moment of creation**. This app is that idea made interactive: one endless sheet of paper, one brush, no limits.
 
-A free, open, browser-based spiritual successor to the (iPad-only, paid) Endless Paper — rebuilt from scratch as its own thing.
-
 ## ✨ What makes it special
 
 - **Truly infinite, razor-sharp canvas** — strokes are stored as vectors in world space, so pan and zoom stay perfectly crisp from 2% to 6400% on web, Android and Apple alike. Zoom into a dot and keep drawing — *worlds within worlds*.
@@ -52,4 +50,4 @@ python -m http.server 8080   # → http://localhost:8080
 
 ## License
 
-MIT. Not affiliated with Endless Paper.
+MIT. 
