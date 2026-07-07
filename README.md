@@ -86,7 +86,7 @@ python -m http.server 8080   # then open http://localhost:8080
 
 ## 📄 License
 
-**MIT** — do anything you like with it. Not affiliated with any other app.
+**MIT**
 
 Made with love. Now go fill the endless page! 🎨✨
 
