@@ -1,23 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#232634"/>
-      <stop offset="1" stop-color="#12131a"/>
+      <stop offset="0" stop-color="#20222b"/><stop offset="1" stop-color="#0f1014"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <!-- paper sheet -->
-  <rect x="132" y="96" width="248" height="320" rx="16" fill="#f6f3ec"/>
-  <!-- dotted infinite grid on the sheet -->
-  <g fill="#00000018">
-    <circle cx="176" cy="150" r="4"/><circle cx="232" cy="150" r="4"/><circle cx="288" cy="150" r="4"/><circle cx="344" cy="150" r="4"/>
-    <circle cx="176" cy="206" r="4"/><circle cx="232" cy="206" r="4"/><circle cx="288" cy="206" r="4"/><circle cx="344" cy="206" r="4"/>
-    <circle cx="176" cy="262" r="4"/><circle cx="232" cy="262" r="4"/><circle cx="288" cy="262" r="4"/><circle cx="344" cy="262" r="4"/>
-    <circle cx="176" cy="318" r="4"/><circle cx="232" cy="318" r="4"/><circle cx="288" cy="318" r="4"/><circle cx="344" cy="318" r="4"/>
-    <circle cx="176" cy="374" r="4"/><circle cx="232" cy="374" r="4"/><circle cx="288" cy="374" r="4"/><circle cx="344" cy="374" r="4"/>
-  </g>
-  <!-- brush stroke -->
-  <path d="M168 330 C 210 210, 300 210, 344 322" fill="none" stroke="#7c9cff" stroke-width="22" stroke-linecap="round"/>
-  <!-- 無 mark -->
-  <text x="256" y="470" font-family="system-ui, sans-serif" font-size="52" font-weight="700" fill="#f6f3ec" text-anchor="middle">無限紙</text>
+  <!-- ensō: a single tapering brush ring, drawn as a stroke with a gap -->
+  <path d="M300 150
+           a120 120 0 1 0 78 96"
+        fill="none" stroke="#e0503a" stroke-width="34" stroke-linecap="round"
+        transform="rotate(18 256 256)"/>
+  <!-- brush tail thinning -->
+  <path d="M356 220 q26 24 20 60" fill="none" stroke="#e0503a" stroke-width="16" stroke-linecap="round"/>
 </svg>

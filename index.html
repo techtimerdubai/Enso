@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#1b1b1f" />
-  <meta name="description" content="無限紙 Mugengami — a free, infinite-canvas drawing & notes app for web and Android. Draw, sketch and think without edges." />
-  <title>無限紙 · Mugengami — Endless Paper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#141418" />
+  <meta name="description" content="Ensō 円相 — a free infinite-canvas drawing app for web, Android & Apple. Sumi-e ink brush, mandala mode, time-lapse replay, personal ink-seal signature, and one-tap free sharing." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ensō" />
+  <title>Ensō 円相 — infinite paper</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -14,18 +18,26 @@
 <body>
   <canvas id="paper"></canvas>
 
-  <!-- Top-left brand -->
-  <div id="brand" class="glass">
-    <span class="jp">無限紙</span>
-    <span class="romaji">Mugengami</span>
+  <!-- Brand -->
+  <div id="brand" class="glass chrome">
+    <span class="ring" aria-hidden="true"></span>
+    <span class="name"><b>Ensō</b><i>円相</i></span>
   </div>
 
-  <!-- Zoom / position readout -->
-  <div id="hud" class="glass" title="Zoom level — scroll or pinch to zoom">100%</div>
+  <!-- Right rail: zoom + zen -->
+  <div id="rail" class="chrome">
+    <button id="zenBtn" class="glass icon" title="Zen mode — hide everything (Z)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+    </button>
+    <div id="hud" class="glass" title="Zoom — scroll or pinch">100%</div>
+  </div>
 
-  <!-- Main toolbar -->
-  <div id="toolbar" class="glass">
-    <button class="tool active" data-tool="pen" title="Pen (P)">
+  <!-- Toolbar -->
+  <div id="toolbar" class="glass chrome">
+    <button class="tool active" data-tool="brush" title="Ink brush (B)">
+      <svg viewBox="0 0 24 24"><path d="M6 3c3 3 3 8 3 11 0 2-1 4-3 4s-3-2-3-4c0-1 1-2 3-2M9 14c4-1 8-4 11-9"/></svg>
+    </button>
+    <button class="tool" data-tool="pen" title="Pen (P)">
       <svg viewBox="0 0 24 24"><path d="M3 21l3.8-.9L20.5 6.4a2 2 0 0 0 0-2.8l-.1-.1a2 2 0 0 0-2.8 0L3.9 17.2 3 21z"/></svg>
     </button>
     <button class="tool" data-tool="marker" title="Highlighter (M)">
@@ -34,46 +46,73 @@
     <button class="tool" data-tool="eraser" title="Eraser (E)">
       <svg viewBox="0 0 24 24"><path d="M4 15l7-7 6 6-4 4H8l-4-3zM14 8l4 4"/></svg>
     </button>
-    <button class="tool" data-tool="pan" title="Pan / Hand (H or hold Space)">
+    <button class="tool" data-tool="pan" title="Pan / hand (H or hold Space)">
       <svg viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V13m0-1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.2a4 4 0 0 1-3-1.4L6 16.5a1.5 1.5 0 0 1 2.2-2L9 15.3"/></svg>
     </button>
 
     <span class="sep"></span>
-
     <div id="swatches"></div>
-
     <span class="sep"></span>
 
-    <label id="size" title="Brush size">
-      <input type="range" min="1" max="48" value="4" id="sizeRange" />
-    </label>
+    <label id="size" title="Brush size"><input type="range" min="1" max="60" value="6" id="sizeRange" /></label>
 
     <span class="sep"></span>
-
-    <button id="undo" title="Undo (Ctrl+Z)">
-      <svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1"/></svg>
+    <button id="symBtn" class="tool" title="Mandala / symmetry mode (S)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
     </button>
-    <button id="redo" title="Redo (Ctrl+Shift+Z)">
-      <svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1"/></svg>
-    </button>
+    <span class="sep"></span>
+    <button id="undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1"/></svg></button>
+    <button id="redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1"/></svg></button>
   </div>
 
-  <!-- Always-visible overflow button (kept outside the scrollable toolbar) -->
-  <button id="menuBtn" class="glass" title="More">
-    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+  <!-- Overflow button -->
+  <button id="menuBtn" class="glass chrome" title="Menu">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
   </button>
 
-  <!-- Overflow menu -->
-  <div id="menu" class="glass hidden">
-    <button data-act="home">↺  Recenter view</button>
-    <button data-act="theme">◐  Toggle paper</button>
-    <button data-act="grid">▦  Toggle grid</button>
-    <button data-act="export">⬇  Export PNG</button>
-    <button data-act="clear">🗑  Clear canvas</button>
-    <a href="https://github.com/techtimerdubai/mugengami" target="_blank" rel="noopener">★  Source on GitHub</a>
+  <!-- Slide-up sheet -->
+  <div id="sheet" class="glass hidden">
+    <div class="sheet-grid">
+      <button data-act="share"><span>􀈂</span>Share</button>
+      <button data-act="replay"><span>▶</span>Replay</button>
+      <button data-act="seal"><span>印</span>Ink seal</button>
+      <button data-act="png"><span>⬇</span>PNG</button>
+      <button data-act="svg"><span>⬇</span>SVG (vector)</button>
+      <button data-act="home"><span>↺</span>Recenter</button>
+      <button data-act="theme"><span>◐</span>Paper</button>
+      <button data-act="grid"><span>▦</span>Grid</button>
+      <button data-act="symaxes"><span>❋</span>Axes: <em id="axesLabel">6</em></button>
+      <button data-act="clear" class="danger"><span>🗑</span>Clear</button>
+    </div>
+    <a class="ghlink" href="https://github.com/techtimerdubai/enso" target="_blank" rel="noopener">Ensō is free & open source — ★ on GitHub</a>
   </div>
 
-  <div id="hint">Draw anywhere · scroll or pinch to zoom · hold <kbd>Space</kbd> or two fingers to pan</div>
+  <!-- Seal maker modal -->
+  <div id="sealModal" class="modal hidden">
+    <div class="modal-card glass">
+      <h3>Your ink seal <i>印</i></h3>
+      <p class="muted">Type a name or word — Ensō carves a one-of-a-kind hanko stamp just for you.</p>
+      <input id="sealInput" type="text" maxlength="16" placeholder="e.g. 円相 · Aya · Kenji" />
+      <div class="seal-preview"><canvas id="sealCanvas" width="220" height="220"></canvas></div>
+      <div class="modal-actions">
+        <button id="sealStamp" class="primary">Use as signature</button>
+        <button id="sealDownload">Download</button>
+        <button id="sealClose" class="ghost">Close</button>
+      </div>
+      <p class="muted tiny">After “Use as signature”, tap anywhere on the canvas to stamp it.</p>
+    </div>
+  </div>
+
+  <!-- Replay overlay -->
+  <div id="replayBar" class="glass hidden">
+    <button id="replayToggle" title="Pause/Play">⏸</button>
+    <input id="replaySeek" type="range" min="0" max="1000" value="0" />
+    <button id="replayRec" title="Record a video of the replay">● REC</button>
+    <button id="replayExit" title="Exit replay">✕</button>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+  <div id="hint">Draw anywhere · pinch or scroll to zoom · two fingers or <kbd>Space</kbd> to pan</div>
 
   <script src="app.js"></script>
 </body>

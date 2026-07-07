@@ -1,46 +1,55 @@
-# 無限紙 · Mugengami — Endless Paper
+<div align="center">
 
-A **free, open** infinite-canvas drawing & notes app for the **web and Android**. Draw, sketch, and think without edges — pan and zoom forever on a single boundless sheet.
+# Ensō 円相
 
-> *Mugengami* (無限紙) = **mugen** 無限 "infinite / endless" + **kami / gami** 紙 "paper".
+**A free, infinite-canvas ink app for web, Android & Apple.**
+Draw, sketch and think without edges — then share it in one tap, for free.
 
-A free, web-based tribute to the lovely (iPad-only, paid) [Endless Paper](https://www.endlesspaper.app/) — rebuilt as a zero-cost Progressive Web App that runs in any modern browser and installs to your Android home screen.
+[**▶ Open Ensō**](https://techtimerdubai.github.io/enso/)
 
-## ✨ Features
+</div>
 
-- **Truly infinite canvas** — strokes are stored as vectors in world space, so panning and zooming stay razor-sharp at any scale.
-- **Natural drawing** — pressure-sensitive pen (stylus & Apple/Samsung pen supported via Pointer Events), highlighter, and eraser.
-- **Pinch to zoom, two-finger pan** on touch; scroll / `Ctrl`-scroll and hold `Space` to pan on desktop.
-- **Dotted grid** and light / dark paper.
-- **Undo / redo**, **PNG export**, and **auto-save** to your device (nothing leaves your browser).
-- **Installable & offline** — full PWA with a service worker; works with no connection once loaded.
-- **100% client-side** — no accounts, no servers, no tracking. Your drawings never leave your device.
+---
+
+*Ensō* (円相) is the Zen circle painted in a single breath — a symbol of **infinity, the void, and the moment of creation**. This app is that idea made interactive: one endless sheet of paper, one brush, no limits.
+
+A free, open, browser-based spiritual successor to the (iPad-only, paid) Endless Paper — rebuilt from scratch as its own thing.
+
+## ✨ What makes it special
+
+- **Truly infinite, razor-sharp canvas** — strokes are stored as vectors in world space, so pan and zoom stay perfectly crisp from 2% to 6400% on web, Android and Apple alike. Zoom into a dot and keep drawing — *worlds within worlds*.
+- **墨 Sumi-e ink brush** — a calligraphic brush that thickens with pressure and tapers with speed, for expressive, living strokes. Plus pen, highlighter and eraser.
+- **❋ Mandala mode** — mirror every stroke across 2–12 axes for instant, mesmerising kaleidoscope art.
+- **和 Authentic Japanese palette** — real traditional colours: 藍 indigo, 朱 vermilion, 萌黄 spring-green, 藤 wisteria and more.
+- **印 Your own ink seal** — type a name and Ensō carves a one-of-a-kind *hanko* stamp, seeded from your text. Sign your work with a personal seal no one else has.
+- **▶ Time-lapse replay** — watch your drawing paint itself, and **record it to a video** to share the process, not just the result.
+- **☯ Zen mode** — one tap hides all UI. Just you and endless paper.
+- **Free sharing** — native share sheet (Android/Apple), or export **PNG** and infinite-quality **SVG**. Everything stays 100% on your device — no accounts, no servers, no tracking.
+- **Installable & offline** — a full PWA; add it to your home screen and it works with no connection.
 
 ## ⌨️ Shortcuts
 
-| Key | Action | | Key | Action |
+| Key | | Key | | Key |
 |---|---|---|---|---|
-| `P` | Pen | | `Ctrl/⌘ + Z` | Undo |
-| `M` | Highlighter | | `Ctrl/⌘ + Shift + Z` | Redo |
-| `E` | Eraser | | Scroll / pinch | Zoom |
-| `H` / hold `Space` | Pan | | Two-finger drag | Pan |
+| `B` Brush | | `P` Pen | | `M` Highlighter |
+| `E` Eraser | | `H` / `Space` Pan | | `S` Mandala |
+| `Z` Zen mode | | `Ctrl/⌘+Z` Undo | | `Ctrl/⌘+Shift+Z` Redo |
 
-## 📱 Install on Android
+Scroll or pinch to zoom · two fingers or hold `Space` to pan.
 
-Open the site in Chrome → menu **⋮** → **Add to Home screen**. It launches full-screen like a native app and works offline.
+## 📱 Install on your phone
+
+Open the [site](https://techtimerdubai.github.io/enso/) → browser menu → **Add to Home screen**. It launches full-screen and works offline.
 
 ## 🛠 Tech
 
-Plain HTML + CSS + vanilla JavaScript on a single `<canvas>`. No build step, no dependencies, no framework — just static files. Deployed on GitHub Pages.
-
-## Running locally
+Plain HTML + CSS + vanilla JavaScript on a single `<canvas>`. No build step, no dependencies, no framework — just static files on GitHub Pages. Icons generated with Pillow.
 
 ```bash
-# any static file server works
-python -m http.server 8080
-# then open http://localhost:8080
+# run locally — any static server works
+python -m http.server 8080   # → http://localhost:8080
 ```
 
 ## License
 
-MIT — do anything you like. Not affiliated with Endless Paper.
+MIT. Not affiliated with Endless Paper.

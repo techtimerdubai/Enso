@@ -1,5 +1,5 @@
-/* 無限紙 Mugengami — offline service worker */
-const CACHE = 'mugengami-v1';
+/* Ensō 円相 — offline service worker */
+const CACHE = 'enso-v2';
 const ASSETS = [
   './',
   './index.html',
