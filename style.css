@@ -143,6 +143,22 @@ body.eyedrop #paper{cursor:crosshair}
 .modal-actions .primary:hover{background:var(--accent-2)}
 .modal-actions .ghost{background:transparent}
 
+/* Support / donate */
+.ghlink.support-link{border:none;background:transparent;cursor:pointer;width:100%;margin-top:4px;padding-top:8px;color:var(--accent);font-weight:600}
+.ghlink.support-link:hover{color:#ff7a63}
+.donate-list{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.donate-row{border:1px solid var(--brd);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.04)}
+.donate-row .dr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.donate-row .dr-name{font-size:13px;font-weight:600}
+.donate-row .dr-sym{font-size:11px;color:var(--muted);background:rgba(255,255,255,.08);padding:2px 8px;border-radius:20px}
+.donate-row .dr-addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--fg);word-break:break-all;line-height:1.5}
+.donate-row .dr-actions{display:flex;gap:8px;margin-top:8px}
+.donate-row .dr-actions button,.donate-row .dr-actions a{flex:1;text-align:center;padding:8px;border-radius:9px;border:1px solid var(--brd);
+  background:rgba(255,255,255,.06);color:var(--fg);font-size:13px;cursor:pointer;text-decoration:none}
+.donate-row .dr-actions button:hover,.donate-row .dr-actions a:hover{background:rgba(255,255,255,.12)}
+.donate-row .dr-copy{color:var(--accent)!important}
+.donate-row .dr-todo{font-size:12px;color:var(--muted);font-style:italic}
+
 /* Layers panel */
 .layer-list{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:44dvh;overflow-y:auto}
 .layer-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--brd);border-radius:11px;background:rgba(255,255,255,.04)}

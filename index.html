@@ -98,6 +98,7 @@
       <button data-act="clear" class="danger" role="menuitem"><span aria-hidden="true">🗑</span>Clear</button>
     </div>
     <a class="ghlink" href="https://github.com/techtimerdubai/Enso" target="_blank" rel="noopener noreferrer">Ensō is free & open source — ★ on GitHub</a>
+    <button class="ghlink support-link" data-act="donate" role="menuitem">🌱 Support Ensō — free forever</button>
   </div>
 
   <!-- Seal maker modal -->
@@ -113,6 +114,16 @@
         <button id="sealClose" class="ghost">Close</button>
       </div>
       <p class="muted tiny">After “Use as signature”, tap anywhere on the canvas to stamp it.</p>
+    </div>
+  </div>
+
+  <!-- Support / crypto donate -->
+  <div id="donateModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
+    <div class="modal-card glass">
+      <h3 id="donateTitle">Support Ensō <span aria-hidden="true">🌱</span></h3>
+      <p class="muted">Ensō is <b>free &amp; ad-free forever</b>. If it brings you a little calm, a tiny crypto tip keeps it growing — no fees, no middle-man. Thank you 💛</p>
+      <div id="donateList" class="donate-list"></div>
+      <div class="modal-actions"><button id="donateClose" class="ghost">Close</button></div>
     </div>
   </div>
 
