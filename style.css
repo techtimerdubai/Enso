@@ -11,6 +11,14 @@
   --shadow:0 10px 40px rgba(0,0,0,.45);
   --radius:16px;
 }
+/* Rounded display font (self-hosted so it works offline & within CSP) */
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url(fonts/fredoka-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url(fonts/fredoka-latinext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
@@ -105,6 +113,37 @@ body:not(.colors-open) #colorTray{opacity:0;transform:translateX(-50%) translate
 #colorTray .pal-size #sizeRange{width:100%}
 #toast .toast-act{margin-left:12px;background:transparent;border:1px solid var(--accent);color:#ff9d85;border-radius:9px;padding:5px 13px;font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle}
 #toast .toast-act:active{transform:scale(.94)}
+
+/* ---- delight pack ---- */
+/* rounded display font on brand + headings only */
+#brand .name b{font-family:'Fredoka',system-ui,sans-serif;font-weight:600}
+.modal-card h3, #sealTitle, #donateTitle, #layerTitle, #brushTitle, #stickerTitle{font-family:'Fredoka',system-ui,sans-serif;font-weight:500}
+
+/* breathing ensō ring */
+@keyframes ensobreathe{0%,100%{transform:rotate(35deg) scale(1)}50%{transform:rotate(43deg) scale(1.09)}}
+#brand .ring{animation:ensobreathe 4.6s ease-in-out infinite}
+
+/* active-tool accent on the pill */
+#toolBtn.tb{background:rgba(224,80,58,.16);color:#ff9878}
+#toolBtn.tb:hover{background:rgba(224,80,58,.26)}
+body.tools-open #toolBtn.tb{background:var(--accent);color:#fff}
+
+/* sparkle burst (spawned in JS on shape-snap / sticker) */
+.sparkle{position:fixed;z-index:40;pointer-events:none;color:var(--accent);font-size:13px;line-height:1;
+  will-change:transform,opacity;animation:enspark .8s ease-out forwards}
+@keyframes enspark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}22%{opacity:1}
+  100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),calc(-50% + var(--ty,0px))) scale(1)}}
+
+/* paper picker + palette switcher in the colour tray */
+#paletteRow{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.palchip{padding:5px 11px;border-radius:11px;border:1px solid var(--brd);background:rgba(255,255,255,.05);color:var(--fg);font-size:12px;cursor:pointer}
+.palchip.on{background:var(--accent);color:#fff;border-color:transparent}
+#paperRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd)}
+.papertile{width:40px;height:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;padding:0;background-repeat:repeat}
+.papertile.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+#colorTray #swatches{margin-top:9px;padding-top:9px;border-top:1px solid var(--brd)}
+
+@media (prefers-reduced-motion: reduce){ #brand .ring{animation:none} .sparkle{display:none} }
 
 /* Radial bloom tool dock (bottom-right) */
 #bloom{position:fixed;right:calc(6px + env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px));

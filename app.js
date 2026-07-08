@@ -43,6 +43,8 @@
     rainbow: false,
     shapeSnap: false,        // auto-clean hand-drawn shapes
     pendingStamp: null,      // {dataURL, img, size} awaiting placement
+    paper: 'dots',           // paper theme (cream · sky · kraft · dots · grid)
+    palette: 'Classic',      // active colour palette
   };
   let rainbowHue = 0;
   let lastBrushStyle = 'brush';
@@ -69,6 +71,23 @@
     { c:'#2f6bff', n:'Blue' },   { c:'#9a5bff', n:'Purple' }, { c:'#ff5fa2', n:'Pink' },
     { c:'#a2673f', n:'Brown' },  { c:'#ffffff', n:'White' },
   ];
+  // Paper themes — background colour + optional pattern
+  const PAPERS = [
+    { id:'cream', label:'Cream', bg:'#f7f4ee', pat:null },
+    { id:'sky',   label:'Sky',   bg:'#e9f1f8', pat:null },
+    { id:'kraft', label:'Kraft', bg:'#e8dcc4', pat:null },
+    { id:'dots',  label:'Dots',  bg:'#f7f4ee', pat:'dots' },
+    { id:'grid',  label:'Grid',  bg:'#f7f4ee', pat:'grid' },
+  ];
+  // Switchable colour palettes (kid-friendly, harmonised)
+  const PALETTES = {
+    Classic: PALETTE,
+    Crayon: [{c:'#e5342b',n:'Red'},{c:'#f6902a',n:'Orange'},{c:'#f7c948',n:'Yellow'},{c:'#3aa655',n:'Green'},{c:'#2b7fd4',n:'Blue'},{c:'#7b52c9',n:'Purple'},{c:'#8d5524',n:'Brown'},{c:'#2b2b31',n:'Black'},{c:'#ffffff',n:'White'}],
+    Pastel: [{c:'#f7a8b8',n:'Rose'},{c:'#ffd6a5',n:'Peach'},{c:'#fdf3a0',n:'Lemon'},{c:'#b8e3c6',n:'Mint'},{c:'#a9d6f0',n:'Sky'},{c:'#cdb4f0',n:'Lilac'},{c:'#e6c9a8',n:'Sand'},{c:'#6b6b73',n:'Grey'},{c:'#ffffff',n:'White'}],
+    Neon: [{c:'#ff2e63',n:'Hot pink'},{c:'#ff9f1c',n:'Orange'},{c:'#eaff00',n:'Yellow'},{c:'#39ff14',n:'Green'},{c:'#00e5ff',n:'Cyan'},{c:'#c400ff',n:'Violet'},{c:'#ff5fa2',n:'Pink'},{c:'#101018',n:'Black'},{c:'#ffffff',n:'White'}],
+    Earth: [{c:'#8d5524',n:'Umber'},{c:'#c68642',n:'Ochre'},{c:'#e0ac69',n:'Sand'},{c:'#7a8450',n:'Moss'},{c:'#4a6670',n:'Slate'},{c:'#a24936',n:'Clay'},{c:'#d9c8a9',n:'Bone'},{c:'#3d3b34',n:'Charcoal'},{c:'#ffffff',n:'White'}],
+  };
+  let activePalette = PALETTES.Classic;
   const STICKERS = ['⭐','🌈','❤️','🌸','🦋','🐱','🐶','🌟','🍭','🎈','🌞','🍡','🐢','🌷','⚡','🍎'];
 
   /* 💛 CRYPTO DONATIONS — replace the YOUR_… placeholders with your own wallet
@@ -79,14 +98,15 @@
     { sym:'SOL',  name:'Solana',                 addr:'YOUR_SOL_ADDRESS',  scheme:'solana' },
     { sym:'TON',  name:'Toncoin',                addr:'YOUR_TON_ADDRESS',  scheme:'ton' },
   ];
-  const paperColor = () => state.theme === 'dark' ? '#17181c' : '#f7f4ee';
+  const paperColor = () => state.theme === 'dark' ? '#17181c'
+    : ((PAPERS.find(x=>x.id===state.paper) || PAPERS[0]).bg);
 
   /* ---------------- persistence ---------------- */
   const KEY = 'enso.doc.v2';
   let quotaWarned = false;
   const save = () => { try {
     localStorage.setItem(KEY, JSON.stringify({ strokes: serialize(strokes), cam, layers, activeLayer, nextLayerId,
-      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap } }));
+      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap, paper:state.paper, palette:state.palette } }));
   } catch(e){ if(!quotaWarned){ quotaWarned = true; toast('Storage full — older work may not auto-save. Export to keep it.'); } } };
   const saveSoon = debounce(save, 400);
   function serialize(list){ return list.map(s => s.tool==='stamp'
@@ -97,7 +117,8 @@
     strokes=[]; undoStack=[]; redoStack=[]; selection.clear();
     layers=[{id:1,name:'Layer 1',visible:true,opacity:1}]; activeLayer=1; nextLayerId=2;
     if(d.cam) Object.assign(cam, d.cam);
-    if(d.state){ state.theme=d.state.theme||state.theme; state.grid=d.state.grid!==false; state.axes=d.state.axes||6; state.shapeSnap=!!d.state.shape; }
+    if(d.state){ state.theme=d.state.theme||state.theme; state.grid=d.state.grid!==false; state.axes=d.state.axes||6; state.shapeSnap=!!d.state.shape;
+      state.paper=d.state.paper || (d.state.grid===false?'cream':'dots'); state.palette=d.state.palette||'Classic'; }
     if(Array.isArray(d.layers) && d.layers.length){ layers=d.layers; activeLayer=d.activeLayer||layers[0].id; nextLayerId=d.nextLayerId||(Math.max(...layers.map(l=>l.id))+1); }
     if(Array.isArray(d.strokes)) for(const s of d.strokes){
       if(s.tool==='stamp'){ const st=makeStamp(s.dataURL, s.x, s.y, s.size, undefined, s.ar, s.rot); st.layer=s.layer||layers[0].id; strokes.push(st); }
@@ -153,7 +174,9 @@
   function paintPaper(){
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.fillStyle = paperColor(); ctx.fillRect(0,0,innerWidth,innerHeight);
-    if(state.grid) drawGrid(ctx);
+    const p = PAPERS.find(x=>x.id===state.paper) || PAPERS[0];
+    if(p.pat==='dots') drawGrid(ctx);
+    else if(p.pat==='grid') drawGridLines(ctx);
   }
 
   function render(){
@@ -227,6 +250,17 @@
     g.fillStyle = state.theme==='dark' ? 'rgba(255,255,255,.06)' : 'rgba(60,50,40,.07)';
     const r = clamp(cam.scale, .6, 1.4);
     for(let x=ox; x<innerWidth; x+=step) for(let y=oy; y<innerHeight; y+=step) g.fillRect(x-r/2, y-r/2, r, r);
+  }
+  function drawGridLines(g){
+    let step = 34 * cam.scale;
+    while(step < 16) step *= 4;
+    while(step > 150) step /= 4;
+    const ox = ((cam.x*cam.scale)%step+step)%step, oy = ((cam.y*cam.scale)%step+step)%step;
+    g.strokeStyle = state.theme==='dark' ? 'rgba(255,255,255,.06)' : 'rgba(60,50,40,.08)';
+    g.lineWidth = 1; g.beginPath();
+    for(let x=ox; x<innerWidth; x+=step){ g.moveTo(x,0); g.lineTo(x,innerHeight); }
+    for(let y=oy; y<innerHeight; y+=step){ g.moveTo(0,y); g.lineTo(innerWidth,y); }
+    g.stroke();
   }
 
   function drawSymGuide(){
@@ -468,7 +502,8 @@
         finalizeStroke(live);
         if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
           const shaped=recognizeShape(live);
-          if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind); }
+          if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind);
+            const bb=live.bb; if(bb){ const sp=worldToScreen((bb.minX+bb.maxX)/2,(bb.minY+bb.maxY)/2); sparkleBurst(sp.x, sp.y, live.color); } }
         }
         commit(state.sym ? [live, ...symCopies(live)] : [live]);
       }
@@ -891,19 +926,24 @@
   const swatchEls = [];
   function setColor(c, el){ state.color=c; state.rainbow=false;
     if(!isDrawStyle(state.tool)) selectTool(lastBrushStyle);
-    swatchEls.forEach(n=>n.classList.remove('active')); if(el) el.classList.add('active'); updateBrushDot(); }
-  PALETTE.forEach((s,i)=>{
-    const el=document.createElement('button'); el.className='swatch'+(i===0?' active':''); el.type='button';
-    el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
-    if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
-    el.addEventListener('click',()=>{ setColor(s.c, el); buzz(6); });
-    sw.appendChild(el); swatchEls.push(el);
-  });
+    sw.querySelectorAll('.swatch').forEach(n=>n.classList.remove('active'));
+    const match = el || sw.querySelector('.swatch[data-c="'+(c||'').toLowerCase()+'"]');
+    if(match) match.classList.add('active'); updateBrushDot(); }
+  // palette swatches live in their own wrapper so the palette can be swapped
+  const paletteWrap=document.createElement('span'); paletteWrap.style.display='contents'; sw.appendChild(paletteWrap);
+  function renderPalette(){ paletteWrap.innerHTML='';
+    activePalette.forEach((s)=>{ const el=document.createElement('button'); el.className='swatch'; el.type='button';
+      el.dataset.c=s.c.toLowerCase(); el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
+      if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
+      el.addEventListener('click',()=>{ setColor(s.c, el); buzz(6); });
+      paletteWrap.appendChild(el); });
+    const m=sw.querySelector('.swatch[data-c="'+(state.color||'').toLowerCase()+'"]'); if(m) m.classList.add('active'); }
+  renderPalette();
   // rainbow / magic swatch
   const rainbowEl=document.createElement('button'); rainbowEl.type='button'; rainbowEl.className='swatch rainbow'; rainbowEl.title='Rainbow (magic)'; rainbowEl.setAttribute('aria-label','Rainbow magic colour');
   rainbowEl.addEventListener('click',()=>{ state.rainbow=true;
     if(!isDrawStyle(state.tool)) selectTool(lastBrushStyle);
-    swatchEls.forEach(n=>n.classList.remove('active')); rainbowEl.classList.add('active'); updateBrushDot(); buzz(6); toast('🌈 Rainbow! Every line a new colour'); });
+    sw.querySelectorAll('.swatch').forEach(n=>n.classList.remove('active')); rainbowEl.classList.add('active'); updateBrushDot(); buzz(6); toast('🌈 Rainbow! Every line a new colour'); });
   sw.appendChild(rainbowEl); swatchEls.push(rainbowEl);
   // custom colour swatch
   const customEl=document.createElement('label'); customEl.className='swatch custom'; customEl.title='Custom colour'; customEl.setAttribute('aria-label','Pick a custom colour');
@@ -920,7 +960,7 @@
   const recentWrap=document.createElement('span'); recentWrap.style.display='contents'; sw.appendChild(recentWrap);
   let recent = (()=>{ try{ return JSON.parse(localStorage.getItem('enso.recent')||'[]'); }catch(e){ return []; } })();
   function addRecent(c){ if(!validHex(c)) return; c=c.toLowerCase();
-    if(PALETTE.some(p=>p.c.toLowerCase()===c)) return;
+    if(activePalette.some(p=>p.c.toLowerCase()===c)) return;
     recent = [c, ...recent.filter(x=>x!==c)].slice(0,4);
     try{ localStorage.setItem('enso.recent', JSON.stringify(recent)); }catch(e){}
     renderRecent(); }
@@ -958,12 +998,46 @@
     if(document.body.classList.contains('colors-open') && !colorTray.contains(e.target) && !colorBtn.contains(e.target)) setTray('colors', false);
   });
 
-  // favourite colours inline on the bar (first 4 palette colours)
+  // favourite colours inline on the bar (first 4 of the active palette)
   const favWrap=document.getElementById('favColors'); const favEls=[];
-  PALETTE.slice(0,4).forEach((s,i)=>{ const el=document.createElement('button'); el.type='button'; el.className='favdot'; el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
-    if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
-    el.addEventListener('click',()=>{ setColor(s.c, swatchEls[i]); buzz(6); }); favWrap.appendChild(el); favEls.push({el, c:s.c.toLowerCase()}); });
+  function renderFavs(){ favWrap.innerHTML=''; favEls.length=0;
+    activePalette.slice(0,4).forEach((s)=>{ const el=document.createElement('button'); el.type='button'; el.className='favdot'; el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
+      if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
+      el.addEventListener('click',()=>{ setColor(s.c); buzz(6); }); favWrap.appendChild(el); favEls.push({el, c:s.c.toLowerCase()}); });
+    updateFav(); }
   function updateFav(){ favEls.forEach(f=>f.el.classList.toggle('on', !state.rainbow && (state.color||'').toLowerCase()===f.c)); }
+  renderFavs();
+  // colour-palette switcher + paper picker (top of the colour tray)
+  function setPalette(name){ if(!PALETTES[name]) name='Classic'; state.palette=name; activePalette=PALETTES[name];
+    renderPalette(); renderFavs(); document.querySelectorAll('.palchip').forEach(c=>c.classList.toggle('on', c.dataset.pal===name)); updateBrushDot(); saveSoon(); }
+  function setPaper(id){ if(!PAPERS.some(p=>p.id===id)) id='cream'; state.paper=id;
+    document.querySelectorAll('.papertile').forEach(t=>t.classList.toggle('on', t.dataset.paper===id)); invalidate(); saveSoon(); }
+  (function buildPickers(){
+    const tray=document.getElementById('colorTray');
+    const palRow=document.createElement('div'); palRow.id='paletteRow';
+    Object.keys(PALETTES).forEach(name=>{ const c=document.createElement('button'); c.type='button'; c.className='palchip'; c.dataset.pal=name; c.textContent=name;
+      c.addEventListener('click',()=>{ setPalette(name); buzz(6); }); palRow.appendChild(c); });
+    const paperRow=document.createElement('div'); paperRow.id='paperRow';
+    PAPERS.forEach(p=>{ const t=document.createElement('button'); t.type='button'; t.className='papertile'; t.dataset.paper=p.id; t.title=p.label; t.setAttribute('aria-label','Paper: '+p.label);
+      t.style.background=p.bg;
+      if(p.pat==='dots'){ t.style.backgroundImage='radial-gradient(#c9c4b6 1.4px,transparent 1.4px)'; t.style.backgroundSize='9px 9px'; }
+      if(p.pat==='grid'){ t.style.backgroundImage='linear-gradient(#d8d3c4 1px,transparent 1px),linear-gradient(90deg,#d8d3c4 1px,transparent 1px)'; t.style.backgroundSize='10px 10px'; }
+      t.addEventListener('click',()=>{ setPaper(p.id); buzz(6); }); paperRow.appendChild(t); });
+    tray.insertBefore(paperRow, tray.firstChild);
+    tray.insertBefore(palRow, tray.firstChild);
+  })();
+  // sparkle burst — fired on shape-snap and sticker placement
+  function sparkleBurst(sx, sy, color){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const chars=['✦','✧','⋆','✦','✧','·','✦'];
+    for(let i=0;i<7;i++){ const el=document.createElement('span'); el.className='sparkle'; el.textContent=chars[i];
+      const ang=(i/7)*Math.PI*2 + i*0.6, dist=20+(i%3)*11;
+      el.style.left=sx+'px'; el.style.top=sy+'px'; if(color) el.style.color=color;
+      el.style.setProperty('--tx', (Math.cos(ang)*dist).toFixed(1)+'px');
+      el.style.setProperty('--ty', (Math.sin(ang)*dist).toFixed(1)+'px');
+      el.style.animationDelay=(i*0.02)+'s';
+      document.body.appendChild(el); setTimeout(()=>el.remove(), 900); }
+  }
 
   function updateOrb(){
     const el = isDrawStyle(state.tool) ? brushBtn : document.querySelector('.tool[data-tool="'+state.tool+'"]');
@@ -1032,7 +1106,7 @@
     if(a==='home'){ animateCam(0,0,1); }
     else if(a==='fit') zoomToFit();
     else if(a==='theme'){ state.theme=state.theme==='dark'?'light':'dark'; invalidate(); saveSoon(); }
-    else if(a==='grid'){ state.grid=!state.grid; invalidate(); saveSoon(); }
+    else if(a==='grid'){ setPaper(state.paper==='cream'?'dots':'cream'); }
     else if(a==='shapesnap'){ state.shapeSnap=!state.shapeSnap; toast(state.shapeSnap?'✦ Shape snap ON — draw a circle, box, line…':'Shape snap off'); saveSoon(); }
     else if(a==='symaxes') cycleAxes();
     else if(a==='png') exportPNG();
@@ -1083,7 +1157,7 @@
   function placeStamp(sx, sy){
     const p=state.pendingStamp; const w=toWorld(sx,sy); const size=(p.size||80)/cam.scale;
     const st=makeStamp(p.dataURL, w.x, w.y, size, p.img);
-    redoStack.length=0; commit([st]); clearPendingStamp(); buzz(14); requestRender();
+    redoStack.length=0; commit([st]); clearPendingStamp(); buzz(14); sparkleBurst(sx, sy); requestRender();
   }
   function makeStamp(dataURL, x, y, size, img, ar, rot){
     const st={ tool:'stamp', dataURL, x, y, size, ar:ar||1, rot:rot||0, layer:activeLayer };
@@ -1232,7 +1306,7 @@
   function exportPNG(){ const out=renderToCanvas(); if(!out){ toast('Nothing to export yet'); return; } out.toBlob(b=>downloadBlob(b,'enso-'+stamp()+'.png'),'image/png'); }
   // save / open an editable Ensō document file (real backup + sharing)
   function exportDoc(){
-    const data=JSON.stringify({ v:2, strokes:serialize(strokes), cam, layers, activeLayer, nextLayerId, state:{theme:state.theme,grid:state.grid,axes:state.axes} });
+    const data=JSON.stringify({ v:2, strokes:serialize(strokes), cam, layers, activeLayer, nextLayerId, state:{theme:state.theme,grid:state.grid,axes:state.axes,paper:state.paper,palette:state.palette} });
     downloadBlob(new Blob([data],{type:'application/json'}), 'enso-'+stamp()+'.enso.json'); toast('Saved file ✓');
   }
   function importDoc(){
@@ -1443,7 +1517,7 @@
   }
 
   /* ---------------- boot ---------------- */
-  load(); gridRebuild(); selectTool(state.tool); updateHud(); maybeShowAppPrompt();
+  load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); updateHud(); maybeShowAppPrompt();
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();

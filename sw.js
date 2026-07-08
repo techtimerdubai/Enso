@@ -1,9 +1,10 @@
 /* Ensō 円相 — service worker.
    Network-first for the app shell so updates reach users immediately when online,
    with a cached fallback so the app still works fully offline. */
-const CACHE = 'enso-v28';
+const CACHE = 'enso-v29';
 const ASSETS = [
   './', './index.html', './style.css', './app.js', './manifest.webmanifest',
+  './fonts/fredoka-latin.woff2', './fonts/fredoka-latinext.woff2',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-1024.png',
   './icons/icon-180.png', './icons/icon-maskable.png',
 ];
