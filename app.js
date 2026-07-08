@@ -6,7 +6,9 @@
   'use strict';
 
   const canvas = document.getElementById('paper');
-  const ctx = canvas.getContext('2d', { alpha:false });
+  // desynchronized: low-latency path — the browser paints ink to a fast, un-synced
+  // buffer, cutting pen-to-screen lag (biggest perceived-smoothness win on Android).
+  const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
   if(!ctx){ document.body.innerHTML = '<p style="color:#eee;font:16px system-ui;padding:24px">Sorry — your browser can’t run Ensō (no canvas support). Try a recent Chrome, Safari, Firefox or Edge.</p>'; return; }
   // two offscreen layers: committed ink (cached) + a live-draw overlay. Paper+grid are drawn
   // straight onto the visible canvas each frame (cheap) — one fewer full-screen buffer to hold.
@@ -174,7 +176,13 @@
       octx.drawImage(inkCv, 0, 0);
       worldTransform(octx);
       const clip = clipRect();
-      drawStroke(octx, live, 0, clip);
+      // splice the predicted tail on for rendering only (constant leading-edge width)
+      let ls = live;
+      if(live._pred && live._pred.length){
+        const lp = live.pts[live.pts.length-1];
+        if(lp){ ls = { tool:live.tool, color:live.color, pts: live.pts.concat(live._pred.map(p=>({x:p.x,y:p.y,w:lp.w,_t:lp._t}))) }; }
+      }
+      drawStroke(octx, ls, 0, clip);
       if(state.sym) for(const c of symCopies(live)) drawStroke(octx, c, 0, clip);
       ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(overCv, 0, 0);
     } else {
@@ -403,6 +411,9 @@
         if(last && Math.hypot(w.x-last.x, w.y-last.y)*cam.scale < 0.6) continue;
         addPoint(live, w.x, w.y, pressure(ev), now-live._t);
       }
+      // Predicted events: a short provisional tail ahead of the real pen position.
+      // Rendered but NOT committed — makes ink feel glued to the pen, no overshoot on lift.
+      live._pred = e.getPredictedEvents ? e.getPredictedEvents().map(ev=>toWorld(ev.clientX, ev.clientY)) : null;
       requestRender();
     }
   });
