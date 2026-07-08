@@ -17,7 +17,7 @@
 
   /* ---------------- camera & document ---------------- */
   const cam = { x: 0, y: 0, scale: 1 };
-  const MIN_SCALE = 0.004, MAX_SCALE = 1000;   // 0.4% … 100000% — deep "worlds within worlds" zoom, precision-safe
+  const MIN_SCALE = 0.0002, MAX_SCALE = 100000;   // 0.02% … 10,000,000% — deep "worlds within worlds" zoom, precision-safe
   let dpr = clamp(window.devicePixelRatio || 1, 1, 3);
   let cacheValid = false;                 // is inkCv up to date for the current camera?
   const invalidate = () => { cacheValid = false; requestRender(); };
@@ -280,7 +280,7 @@
     setComposite(target, s.tool);
     target.fillStyle = s.color;
     for(const run of runs){
-      if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4,run[0].w/2), 0, 7); target.fill(); }
+      if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4/cam.scale,run[0].w/2), 0, 7); target.fill(); }
       else fillRibbon(target, run, 1);
     }
     resetComposite(target);
@@ -293,7 +293,7 @@
     for(const [wm, a, col] of passes){
       target.globalAlpha = a; target.fillStyle = col;
       for(const run of runs){
-        if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4,run[0].w/2*wm), 0, 7); target.fill(); }
+        if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4/cam.scale,run[0].w/2*wm), 0, 7); target.fill(); }
         else fillRibbon(target, run, wm);
       }
     }
@@ -308,8 +308,8 @@
     for(let i=edges.right.length-1;i>=0;i--) path.lineTo(edges.right[i].x, edges.right[i].y);
     path.closePath();
     target.fill(path);
-    target.beginPath(); target.arc(pts[0].x, pts[0].y, Math.max(.3,pts[0].w/2*wmul), 0, 7); target.fill();
-    const e = pts[pts.length-1]; target.beginPath(); target.arc(e.x, e.y, Math.max(.3,e.w/2*wmul), 0, 7); target.fill();
+    target.beginPath(); target.arc(pts[0].x, pts[0].y, Math.max(.3/cam.scale,pts[0].w/2*wmul), 0, 7); target.fill();
+    const e = pts[pts.length-1]; target.beginPath(); target.arc(e.x, e.y, Math.max(.3/cam.scale,e.w/2*wmul), 0, 7); target.fill();
   }
 
   const pointInRect = (p,r) => p.x>=r.minX && p.x<=r.maxX && p.y>=r.minY && p.y<=r.maxY;
@@ -344,7 +344,7 @@
       if(i===0){ dx=pts[1].x-p.x; dy=pts[1].y-p.y; }
       else if(i===pts.length-1){ dx=p.x-pts[i-1].x; dy=p.y-pts[i-1].y; }
       else { dx=pts[i+1].x-pts[i-1].x; dy=pts[i+1].y-pts[i-1].y; }
-      const len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len, hw=Math.max(.15,p.w/2*m);
+      const len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len, hw=Math.max(.15/cam.scale,p.w/2*m);
       left.push({x:p.x+nx*hw, y:p.y+ny*hw});
       right.push({x:p.x-nx*hw, y:p.y-ny*hw});
     }
