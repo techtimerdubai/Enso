@@ -90,7 +90,7 @@
   const saveSoon = debounce(save, 400);
   function serialize(list){ return list.map(s => s.tool==='stamp'
     ? { tool:'stamp', dataURL:s.dataURL, x:r2(s.x), y:r2(s.y), size:r2(s.size), layer:s.layer }
-    : { tool:s.tool, color:s.color, size:s.size, layer:s.layer, pts:s.pts.map(p=>[r2(p.x),r2(p.y),r2(p.w)]) }); }
+    : { tool:s.tool, color:s.color, size:s.size, layer:s.layer, snapped:s.snapped?1:undefined, pts:s.pts.map(p=>[r2(p.x),r2(p.y),r2(p.w)]) }); }
   function applyDoc(d){
     if(!d) return;
     strokes=[]; undoStack=[]; redoStack=[]; selection.clear();
@@ -100,7 +100,7 @@
     if(Array.isArray(d.layers) && d.layers.length){ layers=d.layers; activeLayer=d.activeLayer||layers[0].id; nextLayerId=d.nextLayerId||(Math.max(...layers.map(l=>l.id))+1); }
     if(Array.isArray(d.strokes)) for(const s of d.strokes){
       if(s.tool==='stamp'){ const st=makeStamp(s.dataURL, s.x, s.y, s.size); st.layer=s.layer||layers[0].id; strokes.push(st); }
-      else { const st={ tool:s.tool, color:s.color, size:s.size, layer:s.layer||layers[0].id, pts:s.pts.map(p=>({x:p[0],y:p[1],w:p[2]})) };
+      else { const st={ tool:s.tool, color:s.color, size:s.size, layer:s.layer||layers[0].id, snapped:!!s.snapped, pts:s.pts.map(p=>({x:p[0],y:p[1],w:p[2]})) };
         finalizeBB(st); strokes.push(st); }
     }
     gridRebuild();
@@ -248,10 +248,32 @@
     for(let i=1;i<pts.length-1;i++){ if(Math.hypot(pts[i].x-last.x,pts[i].y-last.y)>=minD){ out.push(pts[i]); last=pts[i]; } }
     out.push(pts[pts.length-1]); return out;
   }
+  // Catmull-Rom centreline smoothing: resample the polyline through its points with a
+  // spline so fast/sparse strokes render as glassy curves instead of faceted segments.
+  // Subdivision scales with each segment's ON-SCREEN length, so dense strokes (and
+  // zoomed-out views) add ~no extra points — the cost only shows up where it's visible.
+  function smooth(pts){
+    if(pts.length < 3) return pts;
+    const out = [pts[0]];
+    for(let i=0; i<pts.length-1; i++){
+      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      const segPx = Math.hypot(p2.x-p1.x, p2.y-p1.y) * cam.scale;
+      const steps = segPx <= 6 ? 1 : Math.min(24, Math.round(segPx/6));   // 1 = no subdivision (identity)
+      if(steps === 1){ out.push(p2); continue; }
+      for(let s=1; s<=steps; s++){
+        const t=s/steps, t2=t*t, t3=t2*t;
+        const x = 0.5*(2*p1.x + (-p0.x+p2.x)*t + (2*p0.x-5*p1.x+4*p2.x-p3.x)*t2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*t3);
+        const y = 0.5*(2*p1.y + (-p0.y+p2.y)*t + (2*p0.y-5*p1.y+4*p2.y-p3.y)*t2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*t3);
+        out.push({ x, y, w: p1.w + (p2.w-p1.w)*t });
+      }
+    }
+    return out;
+  }
   function drawStroke(target, s, partial, clip){
     let src = partial ? s.pts.slice(0, partial) : s.pts;
     if(!src.length) return;
     src = decimate(src, 0.7/cam.scale);
+    if(!s.snapped) src = smooth(src);   // snapped shapes keep their crisp corners
     const st = STYLES[s.tool];
     const runs = clip ? clipRuns(src, clip) : [src];
     if(st && st.neon){ drawNeon(target, s, runs); return; }
@@ -433,7 +455,7 @@
         finalizeStroke(live);
         if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
           const shaped=recognizeShape(live);
-          if(shaped){ live.pts=shaped.pts; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind); }
+          if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind); }
         }
         commit(state.sym ? [live, ...symCopies(live)] : [live]);
       }
@@ -820,7 +842,7 @@
   }
   function zoomToFit(){
     const bb = bounds();
-    if(!bb){ animateCam(0,0,1); return; }
+    if(!bb || !strokes.length){ animateCam(0,0,1); return; }   // empty canvas → reset to 100%, not a sentinel-bbox fit
     const w=bb.maxX-bb.minX, h=bb.maxY-bb.minY;
     const s = clamp(Math.min(innerWidth/w, innerHeight/h)*0.9, MIN_SCALE, 8);
     animateCam(innerWidth/(2*s)-(bb.minX+w/2), innerHeight/(2*s)-(bb.minY+h/2), s);
