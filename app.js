@@ -53,7 +53,7 @@
     brush:       { label:'Ink brush',   emoji:'🖌️', wp:0.25, ws:0.18, taper:6 },
     pen:         { label:'Pen',          emoji:'🖊️', wp:0.55, ws:0,    taper:3 },
     fineliner:   { label:'Fineliner',    emoji:'✒️', const:true, mult:0.4, taper:2 },
-    pencil:      { label:'Pencil',       emoji:'✏️', wp:0.5,  ws:0.08, taper:3, alpha:0.85, jitter:0.35 },
+    pencil:      { label:'Pencil',       emoji:'✏️', wp:0.72, ws:0.05, taper:3, alpha:0.9, jitter:0.1 },
     marker:      { label:'Highlighter',  emoji:'🖍️', const:true, mult:2.2, taper:0, alpha:0.38, blend:'multiply' },
     crayon:      { label:'Crayon',       emoji:'🖍', wp:0.45, ws:0.05, taper:2, alpha:0.9, jitter:0.5, blend:'multiply' },
     calligraphy: { label:'Calligraphy',  emoji:'🪶', calli:true, taper:3 },
@@ -382,7 +382,10 @@
     drawingId = e.pointerId; redoStack.length = 0;
     const w = toWorld(e.clientX, e.clientY);
     const col = state.rainbow ? nextRainbow() : state.color;
-    live = { tool:state.tool, color:col, size:state.size, layer:activeLayer, pts:[], _t:performance.now() };
+    // width is stored in WORLD units, so divide the screen-px slider size by the zoom:
+    // brushes then paint the SAME on-screen thickness at any zoom (WYSIWYG), and zooming
+    // in yields finer world strokes → effectively unlimited detail on the endless canvas.
+    live = { tool:state.tool, color:col, size:state.size/cam.scale, layer:activeLayer, pts:[], _t:performance.now() };
     live._fx = makeOneEuro(1.7, 0.02); live._fy = makeOneEuro(1.7, 0.02);
     const t0 = e.timeStamp || performance.now();
     const fw = toWorld(live._fx(e.clientX, t0), live._fy(e.clientY, t0));
