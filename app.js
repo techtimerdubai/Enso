@@ -394,7 +394,7 @@
 
   canvas.addEventListener('pointerdown', e => {
     stopInertia(); stopCamAnim();
-    if(document.body.classList.contains('bloom-open')) setBloom(false);
+    if(document.body.classList.contains('tools-open') || document.body.classList.contains('colors-open')) document.body.classList.remove('tools-open','colors-open');
     if(e.pointerType==='pen') penDownCount++;
     // palm rejection — ignore fingers while a stylus is drawing
     if(e.pointerType==='touch' && penDownCount>0) return;
@@ -939,29 +939,37 @@
   const isEyedrop = () => eyedropMode;
   const doSample = (x,y)=>{ sampleColorAt(x,y); eyedropMode=false; document.body.classList.remove('eyedrop'); };
 
-  // collapsible right-side palette
-  const paletteTab=document.getElementById('paletteTab'), paletteDot=paletteTab.querySelector('.pt-dot');
-  let palOpen = localStorage.getItem('enso.palOpen')!=='0';
-  function setPalette(open){ palOpen=open; document.body.classList.toggle('pal-open', open); paletteTab.setAttribute('aria-expanded', open?'true':'false'); try{ localStorage.setItem('enso.palOpen', open?'1':'0'); }catch(e){} }
-  paletteTab.addEventListener('click', ()=>{ setPalette(!palOpen); buzz(6); });
-  setPalette(palOpen);
-
   const brushBtn = document.getElementById('brushBtn'), brushDot = brushBtn.querySelector('.brush-dot');
 
-  // radial bloom dock
-  const bloom=document.getElementById('bloom'), bloomOrb=document.getElementById('bloomOrb'),
-        orbIco=bloomOrb.querySelector('.orb-ico'), orbDot=bloomOrb.querySelector('.orb-dot');
-  document.querySelectorAll('.petal').forEach(p=>{ if(p.dataset.c) p.style.background=p.dataset.c;
-    if(p.dataset.r) p.style.right=p.dataset.r+'px'; if(p.dataset.b) p.style.bottom=p.dataset.b+'px'; });
-  function setBloom(open){ document.body.classList.toggle('bloom-open', open); bloomOrb.setAttribute('aria-expanded', open?'true':'false'); }
-  bloomOrb.addEventListener('click', e=>{ e.stopPropagation(); setBloom(!document.body.classList.contains('bloom-open')); buzz(6); });
-  document.addEventListener('click', e=>{ if(document.body.classList.contains('bloom-open') && !bloom.contains(e.target)) setBloom(false); });
-  function updateOrb(){
-    const el = isDrawStyle(state.tool) ? brushBtn : document.querySelector('.petal[data-tool="'+state.tool+'"]');
-    if(el){ const svg=el.querySelector('svg'); if(svg) orbIco.innerHTML = svg.outerHTML; }
-    orbDot.style.background = state.rainbow ? '#e0503a' : state.color;
+  // one-pill toolbar: pop-up tool tray + colour tray
+  const toolBtn=document.getElementById('toolBtn'), toolIco=toolBtn.querySelector('.tb-ico');
+  const colorBtn=document.getElementById('colorBtn');
+  const toolTray=document.getElementById('toolTray'), colorTray=document.getElementById('colorTray');
+  function setTray(name, open){
+    if(open) document.body.classList.remove((name==='tools'?'colors':'tools')+'-open');
+    document.body.classList.toggle(name+'-open', open);
+    toolBtn.setAttribute('aria-expanded', document.body.classList.contains('tools-open')?'true':'false');
+    colorBtn.setAttribute('aria-expanded', document.body.classList.contains('colors-open')?'true':'false');
   }
-  document.querySelectorAll('.tool[data-tool]').forEach(b=>b.addEventListener('click',()=>{ selectTool(b.dataset.tool); buzz(6); }));
+  toolBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('tools', !document.body.classList.contains('tools-open')); buzz(6); });
+  colorBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('colors', !document.body.classList.contains('colors-open')); buzz(6); });
+  document.addEventListener('click', e=>{
+    if(document.body.classList.contains('tools-open') && !toolTray.contains(e.target) && !toolBtn.contains(e.target)) setTray('tools', false);
+    if(document.body.classList.contains('colors-open') && !colorTray.contains(e.target) && !colorBtn.contains(e.target)) setTray('colors', false);
+  });
+
+  // favourite colours inline on the bar (first 4 palette colours)
+  const favWrap=document.getElementById('favColors'); const favEls=[];
+  PALETTE.slice(0,4).forEach((s,i)=>{ const el=document.createElement('button'); el.type='button'; el.className='favdot'; el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
+    if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
+    el.addEventListener('click',()=>{ setColor(s.c, swatchEls[i]); buzz(6); }); favWrap.appendChild(el); favEls.push({el, c:s.c.toLowerCase()}); });
+  function updateFav(){ favEls.forEach(f=>f.el.classList.toggle('on', !state.rainbow && (state.color||'').toLowerCase()===f.c)); }
+
+  function updateOrb(){
+    const el = isDrawStyle(state.tool) ? brushBtn : document.querySelector('.tool[data-tool="'+state.tool+'"]');
+    if(el){ const svg=el.querySelector('svg'); if(svg && toolIco) toolIco.innerHTML = svg.outerHTML; }
+  }
+  document.querySelectorAll('.tool[data-tool]').forEach(b=>b.addEventListener('click',()=>{ selectTool(b.dataset.tool); setTray('tools', false); buzz(6); }));
   function selectTool(tool){ state.tool=tool; clearPendingStamp();
     if(isDrawStyle(tool)) lastBrushStyle = tool;
     const draw = isDrawStyle(tool);
@@ -975,7 +983,7 @@
   }
   function updateBrushDot(){ const bg = state.rainbow
     ? 'conic-gradient(from 0deg,#ff4d4f,#ffd21a,#37c86b,#20b8e6,#9a5bff,#ff4d4f)' : state.color;
-    brushDot.style.background = bg; if(paletteDot) paletteDot.style.background = bg; if(orbDot) orbDot.style.background = bg; }
+    if(brushDot) brushDot.style.background = bg; if(colorBtn) colorBtn.style.background = bg; updateFav(); }
 
   // brush style picker
   const brushModal=document.getElementById('brushModal'), brushGrid=document.getElementById('brushGrid');
@@ -987,7 +995,7 @@
   });
   function highlightBrush(){ brushGrid.querySelectorAll('.brush').forEach(b=>b.classList.toggle('on', b.dataset.style===state.tool)); }
   function openBrushPicker(){ highlightBrush(); brushModal.classList.remove('hidden'); pushGuard(); }
-  brushBtn.addEventListener('click',()=>{ if(isDrawStyle(state.tool)) openBrushPicker(); else selectTool(lastBrushStyle); buzz(6); });
+  brushBtn.addEventListener('click',()=>{ if(isDrawStyle(state.tool)) openBrushPicker(); else selectTool(lastBrushStyle); setTray('tools', false); buzz(6); });
   document.getElementById('brushClose').addEventListener('click',()=>brushModal.classList.add('hidden'));
   const sizeRange=document.getElementById('sizeRange');
   sizeRange.addEventListener('input',()=>{ state.size=+sizeRange.value; });
@@ -1003,10 +1011,14 @@
     document.body.classList.toggle('zen', on); if(on) pushGuard(); }
 
   { const h=document.getElementById('hud'); if(h) h.addEventListener('click', ()=>{ zoomToFit(); }); }
-  function clearAll(){ if(confirm('Clear the whole canvas? This cannot be undone.')){
-    strokes=[]; undoStack=[]; redoStack=[]; selection.clear(); updateSelBar();
-    layers=[{id:1,name:'Layer 1',visible:true,opacity:1}]; activeLayer=1; nextLayerId=2;
-    gridRebuild(); invalidate(); save(); buzz(12); toast('Fresh paper ✨'); } }
+  function clearAll(){
+    if(!strokes.length){ toast('Canvas is already empty'); return; }
+    const items = strokes.slice();
+    removeItems(items); pushOp({type:'delete', items});   // undoable — no confirm dialog
+    selection.clear(); sel=null; updateSelBar();
+    invalidate(); saveSoon(); buzz(12);
+    toastAction('Canvas cleared', 'Undo', ()=>{ undo(); buzz(8); });
+  }
   document.getElementById('clearBtn').addEventListener('click', clearAll);
 
   /* ---------------- sheet menu ---------------- */
@@ -1318,6 +1330,14 @@
   function updateHud(){ if(hud) hud.textContent = cam.scale>=1 ? Math.round(cam.scale*100)+'%' : (cam.scale*100).toFixed(cam.scale<0.1?1:0)+'%'; }
   let toastT; function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); t.style.opacity='1';
     clearTimeout(toastT); toastT=setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.classList.add('hidden'),300); }, 1900); }
+  // toast with an action button (e.g. a "clear → Undo" snackbar)
+  function toastAction(msg, label, fn){ const t=document.getElementById('toast');
+    t.textContent=''; const s=document.createElement('span'); s.textContent=msg; t.appendChild(s);
+    const b=document.createElement('button'); b.className='toast-act'; b.type='button'; b.textContent=label;
+    const hide=()=>{ t.style.opacity='0'; setTimeout(()=>t.classList.add('hidden'),300); clearTimeout(toastT); };
+    b.addEventListener('click',()=>{ fn(); hide(); });
+    t.appendChild(b); t.classList.remove('hidden'); t.style.opacity='1';
+    clearTimeout(toastT); toastT=setTimeout(hide, 5000); }
   let hintT=setTimeout(hideHint,6500); function hideHint(){ const h=document.getElementById('hint'); if(h) h.style.opacity='0'; clearTimeout(hintT); }
 
   /* ---------------- layers panel ---------------- */

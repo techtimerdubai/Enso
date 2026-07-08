@@ -48,53 +48,47 @@
   </div>
 
 
-  <!-- Radial bloom tool dock (bottom-right) -->
-  <div id="bloom" class="chrome">
-    <button id="brushBtn" class="petal tool active" data-c="#e0503a" data-r="12" data-b="112" aria-label="Brush styles" aria-haspopup="true" aria-pressed="true" title="Brushes (B)">
+  <!-- One-pill toolbar — tool tray pops up above the bar -->
+  <div id="toolTray" class="glass chrome" role="group" aria-label="Tools">
+    <button id="brushBtn" class="tchip tool active" aria-label="Brush styles" aria-haspopup="true" aria-pressed="true" title="Brushes (B)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3c3 3 3 8 3 11 0 2-1 4-3 4s-3-2-3-4c0-1 1-2 3-2M9 14c4-1 8-4 11-9"/></svg>
       <span class="brush-dot" aria-hidden="true"></span>
     </button>
-    <button class="petal tool" data-tool="eraser" data-c="#516" data-r="43" data-b="107" aria-label="Eraser" aria-pressed="false" title="Eraser (E)">
+    <button class="tchip tool" data-tool="eraser" aria-label="Eraser" aria-pressed="false" title="Eraser (E)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l7-7 6 6-4 4H8l-4-3zM14 8l4 4"/></svg>
     </button>
-    <button class="petal tool" data-tool="select" data-c="#2f6bff" data-r="71" data-b="93" aria-label="Select / move" aria-pressed="false" title="Select &amp; move (V)">
+    <button class="tchip tool" data-tool="select" aria-label="Select / move" aria-pressed="false" title="Select &amp; move (V)">
       <svg viewBox="0 0 24 24" aria-hidden="true" stroke-dasharray="3 2.5"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
     </button>
-    <button id="stickerBtn" class="petal tool" data-c="#ffb020" data-r="93" data-b="71" aria-label="Stickers" title="Stickers">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
-    </button>
-    <button id="symBtn" class="petal tool" data-c="#37c86b" data-r="107" data-b="43" aria-label="Mandala symmetry mode" aria-pressed="false" title="Mandala (S)">
+    <button id="symBtn" class="tchip tool" aria-label="Mandala symmetry mode" aria-pressed="false" title="Mandala (S)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
     </button>
-    <button class="petal tool" data-tool="pan" data-c="#9a5bff" data-r="112" data-b="12" aria-label="Pan / hand" aria-pressed="false" title="Pan / hand (H or Space)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V13m0-1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.2a4 4 0 0 1-3-1.4L6 16.5a1.5 1.5 0 0 1 2.2-2L9 15.3"/></svg>
+    <button id="stickerBtn" class="tchip tool" aria-label="Stickers" title="Stickers">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
     </button>
-    <button id="bloomOrb" class="glass" aria-label="Tools — tap to open" aria-expanded="false">
-      <span class="orb-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3c3 3 3 8 3 11 0 2-1 4-3 4s-3-2-3-4c0-1 1-2 3-2M9 14c4-1 8-4 11-9"/></svg></span>
-      <span class="orb-dot" aria-hidden="true"></span>
+    <button class="tchip tool" data-tool="pan" aria-label="Pan / hand" aria-pressed="false" title="Pan / hand (H or Space)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V13m0-1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2.2a4 4 0 0 1-3-1.4L6 16.5a1.5 1.5 0 0 1 2.2-2L9 15.3"/></svg>
     </button>
   </div>
 
-  <!-- Bottom-centre bar: menu · undo · redo · clear -->
-  <div id="dock" class="glass chrome" role="toolbar" aria-label="Menu, history and clear">
-    <button id="menuBtn" class="rbtn" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="Menu">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="none"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
-    </button>
+  <!-- Colour + size tray pops up above the bar -->
+  <div id="colorTray" class="glass chrome" role="group" aria-label="Colours and size">
+    <div id="swatches"></div>
+    <label id="size" class="pal-size"><span class="sr-only">Brush size</span><input type="range" min="1" max="60" value="8" id="sizeRange" aria-label="Brush size" /></label>
+  </div>
+
+  <!-- Single consolidated toolbar (the "one pill") -->
+  <div id="bar" class="glass chrome" role="toolbar" aria-label="Tools, colours and actions">
+    <button id="toolBtn" class="rbtn tb" aria-label="Tools" aria-haspopup="true" aria-expanded="false" title="Tools"><span class="tb-ico" aria-hidden="true"></span></button>
+    <span class="sep" aria-hidden="true"></span>
+    <span id="favColors" class="fav" role="group" aria-label="Favourite colours"></span>
+    <button id="colorBtn" class="colorbtn" aria-label="Colours and size" aria-haspopup="true" aria-expanded="false" title="Colours"></button>
     <span class="sep" aria-hidden="true"></span>
     <button id="undo" class="rbtn" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1"/></svg></button>
     <button id="redo" class="rbtn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1"/></svg></button>
-    <span class="sep" aria-hidden="true"></span>
     <button id="clearBtn" class="rbtn rail-clear" aria-label="Clear canvas" title="Clear canvas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M7 7l1 12h8l1-12"/></svg></button>
-  </div>
-
-  <!-- Collapsible colour palette (right side) -->
-  <button id="paletteTab" class="glass chrome" aria-label="Show or hide colours" aria-expanded="true" title="Colours">
-    <span class="pt-dot" aria-hidden="true"></span>
-    <svg class="pt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-  </button>
-  <div id="paletteBody" class="glass chrome" role="group" aria-label="Colours and size">
-    <div id="swatches"></div>
-    <label id="size" class="pal-size"><span class="sr-only">Brush size</span><input type="range" min="1" max="60" value="8" id="sizeRange" aria-label="Brush size" /></label>
+    <span class="sep" aria-hidden="true"></span>
+    <button id="menuBtn" class="rbtn" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="Menu"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="none"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg></button>
   </div>
 
   <!-- Slide-up menu — quiet monochrome list -->

@@ -74,6 +74,38 @@ button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .rail-clear{color:var(--muted)}
 .rail-clear:hover{background:rgba(224,80,58,.2);color:#ff8266}
 
+/* ---- One-pill toolbar ---- */
+#bar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  display:flex;align-items:center;gap:3px;padding:5px 7px;z-index:6;max-width:calc(100vw - 16px)}
+#bar .sep{width:1px;height:24px;background:var(--brd);margin:0 4px;flex:0 0 auto}
+#toolBtn.tb{width:46px}
+#toolBtn .tb-ico{display:grid;place-items:center}
+#toolBtn .tb-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+body.tools-open #toolBtn{background:var(--accent);color:#fff}
+#favColors{display:flex;align-items:center;gap:6px}
+.favdot{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:0 0 auto;transition:transform .12s}
+.favdot:active{transform:scale(.86)}
+.favdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.colorbtn{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.5);cursor:pointer;padding:0;flex:0 0 auto;background:var(--accent);transition:transform .1s}
+.colorbtn:active{transform:scale(.9)}
+body.colors-open .colorbtn{border-color:#fff;box-shadow:0 0 0 2px var(--accent)}
+#toolTray,#colorTray{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  z-index:7;padding:8px;display:flex;gap:6px;align-items:center;transition:opacity .2s ease, transform .22s cubic-bezier(.2,1.1,.4,1)}
+#colorTray{flex-direction:column;align-items:stretch;width:min(300px,calc(100vw - 20px))}
+body:not(.tools-open) #toolTray{opacity:0;transform:translateX(-50%) translateY(12px) scale(.96);pointer-events:none}
+body:not(.colors-open) #colorTray{opacity:0;transform:translateX(-50%) translateY(12px) scale(.96);pointer-events:none}
+.tchip{width:46px;height:46px;border-radius:13px;border:none;background:rgba(255,255,255,.06);color:var(--fg);
+  display:grid;place-items:center;cursor:pointer;position:relative;transition:background .15s,transform .1s;padding:0}
+.tchip:active{transform:scale(.9)}
+.tchip svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tchip.active{background:var(--accent);color:#fff}
+.tchip .brush-dot{position:absolute;right:5px;bottom:5px;width:9px;height:9px;border-radius:50%;background:#2b2b31;box-shadow:0 0 0 1.5px rgba(0,0,0,.35)}
+#colorTray #swatches{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+#colorTray .pal-size{display:flex;align-items:center;width:100%;margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)}
+#colorTray .pal-size #sizeRange{width:100%}
+#toast .toast-act{margin-left:12px;background:transparent;border:1px solid var(--accent);color:#ff9d85;border-radius:9px;padding:5px 13px;font-size:13px;font-weight:600;cursor:pointer;vertical-align:middle}
+#toast .toast-act:active{transform:scale(.94)}
+
 /* Radial bloom tool dock (bottom-right) */
 #bloom{position:fixed;right:calc(6px + env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px));
   width:172px;height:172px;z-index:7;pointer-events:none}
