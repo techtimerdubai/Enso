@@ -133,6 +133,7 @@
     <div class="sheet-foot">
       <button data-act="install" role="menuitem">Install app</button>
       <button data-act="intro" role="menuitem">Watch intro</button>
+      <button data-act="credits" role="menuitem">Credits</button>
       <button data-act="privacy" role="menuitem">Privacy</button>
     </div>
   </div>
@@ -234,6 +235,20 @@
       <h3 id="wnTitle">What's new in Ensō <span aria-hidden="true">✦</span></h3>
       <ul id="wnList" class="wn-list"></ul>
       <div class="modal-actions"><button id="wnClose" class="primary">Let's draw</button></div>
+    </div>
+  </div>
+
+  <!-- Credits & acknowledgements -->
+  <div id="creditsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="crTitle">
+    <div class="modal-card glass cr-card">
+      <span class="wn-ring" aria-hidden="true"></span>
+      <h3 id="crTitle">Credits &amp; thanks <i lang="ja" aria-hidden="true">円相</i></h3>
+      <div class="cr-list">
+        <div class="cr-row"><span class="cr-role">Ideas &amp; inspiration</span><span class="cr-name">Aayansh <span aria-hidden="true">🌟</span></span></div>
+        <div class="cr-row"><span class="cr-role">Design &amp; development</span><span class="cr-name">Deekonda Kumar <span aria-hidden="true">💛</span></span></div>
+      </div>
+      <p class="cr-note">Inspired by the spirit of the Japanese <i lang="ja">ensō</i> — a circle drawn in a single breath — and the joy of endless paper.</p>
+      <div class="modal-actions"><button id="crClose" class="primary">Close</button></div>
     </div>
   </div>
 

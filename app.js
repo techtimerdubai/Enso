@@ -21,7 +21,7 @@
   const REBASE_BUDGET = 1e6;   // when cam.scale*|cam| exceeds this, re-base the world origin to the camera so far-from-origin stays as crisp as near-origin (float32 rasterizer starts losing sub-pixels ~8e6)
   let dpr = clamp(window.devicePixelRatio || 1, 1, 3);
   let cacheValid = false;                 // is inkCv up to date for the current camera?
-  const invalidate = () => { cacheValid = false; requestRender(); };
+  const invalidate = () => { cacheValid = false; recordCam(); requestRender(); };
 
   let strokes = [];          // committed items (strokes + stamps), in z / draw order
   let undoStack = [];        // operation log: {type:'add'|'delete'|'move', items, dx?, dy?}
@@ -51,6 +51,18 @@
     watermark: true,         // subtle "Made with Ensō" mark on shared images
   };
   let gardenRAF = 0;         // magic-garden sprout animation
+  // Session timeline — records the REAL camera path + per-stroke timing so Replay can
+  // reproduce the actual drawing session (every zoom, pan and stroke), not a fly-through.
+  const session = { t0:null, cam:[], _lm:0, ok:true };
+  function recordCam(force){
+    if(replay.active || !session.ok) return;
+    const now=performance.now();
+    if(session.t0==null) session.t0=now;
+    if(!force && now - session._lm < 55) return;
+    session._lm=now;
+    session.cam.push({ t: now-session.t0, x:cam.x, y:cam.y, s:cam.scale });
+    if(session.cam.length>6000) session.cam.splice(0, session.cam.length-6000);
+  }
   let rainbowHue = 0;
   let lastBrushStyle = 'brush';
 
@@ -215,7 +227,8 @@
       if(replay.outro){ drawEndCard(); return; }              // branded closing card (in recordings)
       octx.setTransform(1,0,0,1,0,0); octx.clearRect(0,0,overCv.width,overCv.height);
       worldTransform(octx);
-      drawScene(octx, strokes, replay.revealed);
+      if(replay.enhanced) drawSceneTimed(octx, strokes, replay.time);
+      else drawScene(octx, strokes, replay.revealed);
       ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(overCv, 0, 0);
       return;
     }
@@ -272,6 +285,31 @@
       }
       else drawStroke(target, s, revealHere < len ? Math.ceil(revealHere) : 0, clip);
     }
+  }
+
+  // Timed replay: reveal each item by its OWN recorded start time + draw duration, so the
+  // playback matches when things were actually drawn (used with the recorded camera path).
+  function drawSceneTimed(target, list, st){
+    const vr=viewRect(), pad=40/cam.scale, clip=clipRect();
+    for(const s of list){
+      const ts=s._ts!=null?s._ts:0;
+      if(st < ts) continue;                              // not drawn yet at this moment
+      if(s.bb && (s.bb.maxX<vr.minX-pad || s.bb.minX>vr.maxX+pad || s.bb.maxY<vr.minY-pad || s.bb.minY>vr.maxY+pad)) continue;
+      if(s.bb && (s.bb.maxX-s.bb.minX)*cam.scale<0.6 && (s.bb.maxY-s.bb.minY)*cam.scale<0.6) continue;
+      const frac=clamp((st-ts)/(s._td||1), 0, 1);
+      if(s.tool==='stamp'){ drawStampItem(target, s); }
+      else { const len=Math.max(1,s.pts.length); drawStroke(target, s, frac>=1?0:Math.max(1,Math.ceil(frac*len)), clip); }
+    }
+  }
+  // Set the camera to its recorded position at session-time st (linear pos, log-lerp scale).
+  function interpCam(st){
+    const a=session.cam; if(!a.length) return;
+    if(st<=a[0].t){ cam.x=a[0].x; cam.y=a[0].y; cam.scale=a[0].s; updateHud(); return; }
+    const last=a[a.length-1];
+    if(st>=last.t){ cam.x=last.x; cam.y=last.y; cam.scale=last.s; updateHud(); return; }
+    let i=1; while(i<a.length && a[i].t<st) i++;
+    const p=a[i-1], q=a[i], f=(st-p.t)/((q.t-p.t)||1);
+    cam.x=p.x+(q.x-p.x)*f; cam.y=p.y+(q.y-p.y)*f; cam.scale=p.s*Math.pow(q.s/p.s, f); updateHud();
   }
 
   function drawGrid(g){
@@ -504,6 +542,7 @@
     // brushes then paint the SAME on-screen thickness at any zoom (WYSIWYG), and zooming
     // in yields finer world strokes → effectively unlimited detail on the endless canvas.
     live = { tool:state.tool, color:col, size:state.size/cam.scale, layer:activeLayer, pts:[], _t:performance.now() };
+    live._startMs = performance.now(); if(session.t0==null) session.t0=live._startMs;
     live._fx = makeOneEuro(1.7, 0.02); live._fy = makeOneEuro(1.7, 0.02);
     const t0 = e.timeStamp || performance.now();
     const fw = toWorld(live._fx(e.clientX, t0), live._fy(e.clientY, t0));
@@ -549,6 +588,7 @@
     if(drawingId===e.pointerId){
       if(live && live.pts.length){
         finalizeStroke(live);
+        live._ts = live._startMs - session.t0; live._td = Math.max(80, performance.now()-live._startMs);
         if(live.tool==='garden'){
           const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c');
@@ -785,7 +825,11 @@
       gridAdd(s);
     }
   }
-  function commit(items){ addItems(items); pushOp({type:'add', items}); invalidate(); saveSoon(); }
+  function commit(items){
+    const now=performance.now(); if(session.t0==null) session.t0=now;
+    for(const it of items){ if(it._ts==null){ it._ts=now-session.t0; it._td=it._td||120; } }
+    addItems(items); pushOp({type:'add', items}); invalidate(); saveSoon();
+  }
   function applyOp(op, forward){
     if(op.type==='add')    forward ? addItems(op.items)    : removeItems(op.items);
     else if(op.type==='delete') forward ? removeItems(op.items) : addItems(op.items);
@@ -1016,6 +1060,7 @@
       }
     }
     cam.x = 0; cam.y = 0;
+    session.ok = false; session.cam.length = 0;   // world coords shifted — the recorded camera path no longer maps; fall back to auto-follow replay
     gridRebuild(); invalidate();
   }
 
@@ -1265,6 +1310,7 @@
     else if(a==='sing') startSing();
     else if(a==='gallery') openGallery();
     else if(a==='music') openMusic();
+    else if(a==='credits') openCredits();
     else if(a==='privacy') window.open('privacy.html','_blank','noopener');
     else if(a==='clear') clearAll();
   }));
@@ -1427,10 +1473,15 @@
   }
   function startReplay(){
     if(!strokes.length){ toast('Draw something first ✍️'); return; }
-    replay.total=totalUnits(); replay.elapsed=0; replay.revealed=0; replay.active=true; replay.playing=true; replay.last=performance.now();
-    replay.dur=clamp(replay.total/150, 3, 14); replay.outro=0;
+    const timed = session.ok && session.cam.length>1 && strokes.some(s=>s._ts!=null);
+    replay.enhanced=timed;
+    replay.total=totalUnits(); replay.elapsed=0; replay.revealed=0; replay.time=0; replay.active=true; replay.playing=true; replay.last=performance.now();
+    if(timed){ let T=0; for(const s of strokes){ if(s._ts!=null) T=Math.max(T, s._ts+(s._td||0)); }
+      T=Math.max(T, session.cam[session.cam.length-1].t)+300; replay.T=T; replay.dur=clamp(T/1000, 3, 22); }
+    else replay.dur=clamp(replay.total/150, 3, 14);
+    replay.outro=0;
     replay.savedCam={ x:cam.x, y:cam.y, scale:cam.scale };   // restore the view on exit
-    const t0=replayCamTarget(1); if(t0) Object.assign(cam, t0);   // open framed on the first marks
+    if(timed) interpCam(0); else { const t0=replayCamTarget(1); if(t0) Object.assign(cam, t0); }   // open on the first recorded frame
     replayBar.classList.remove('hidden'); rToggle.textContent='⏸'; toggleZen(true); pushGuard();
     if(state.music) musicPlaySelection();
     cancelAnimationFrame(replay.raf); loopReplay();
@@ -1449,9 +1500,14 @@
       if(now-replay.outro >= 1100){ replay.outro=0; stopRecording(); }
     } else {
       const t = durMs ? replay.elapsed/durMs : 1;
-      replay.revealed = easeInOut(t) * replay.total;         // eased reveal → flows naturally
-      const tg=replayCamTarget(replay.revealed);             // cinematic auto-follow camera
-      if(tg){ const k=0.10; cam.scale+=(tg.scale-cam.scale)*k; cam.x+=(tg.x-cam.x)*k; cam.y+=(tg.y-cam.y)*k; }
+      if(replay.enhanced){
+        replay.time = t*replay.T;                            // reproduce the real session: exact camera path + real stroke timing
+        interpCam(replay.time);
+      } else {
+        replay.revealed = easeInOut(t) * replay.total;       // eased reveal → flows naturally
+        const tg=replayCamTarget(replay.revealed);           // cinematic auto-follow camera (fallback)
+        if(tg){ const k=0.10; cam.scale+=(tg.scale-cam.scale)*k; cam.x+=(tg.x-cam.x)*k; cam.y+=(tg.y-cam.y)*k; }
+      }
       rSeek.value = Math.round(t*1000)||0;
       rSeek.style.setProperty('--rp', Math.round(t*100)+'%');
     }
@@ -1476,6 +1532,7 @@
     try{
       const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
       const stream=canvas.captureStream(30); replay.chunks=[]; replay.stream=stream; replay.shareMode=!!share;
+      if(state.music){ try{ musicPlaySelection(); const at=musicTrack(); if(at) stream.addTrack(at); }catch(e){} }   // mix the soundtrack into the video
       replay.rec=new MediaRecorder(stream,{ mimeType:type, videoBitsPerSecond:8_000_000 });
       replay.rec.ondataavailable=e=>{ if(e.data.size) replay.chunks.push(e.data); };
       replay.rec.onstop=()=>{ const blob=new Blob(replay.chunks,{type:'video/webm'}); const wasShare=replay.shareMode;
@@ -1484,7 +1541,7 @@
         if(wasShare) shareReplayBlob(blob); else { downloadBlob(blob,'enso-'+stamp()+'.webm'); toast('Video saved 🎬'); } };
       replay.rec.start(); rRec.classList.add('recording'); rRec.textContent='◼ STOP';
       replay.elapsed=0; replay.outro=0; replay.playing=true; replay.last=performance.now(); rToggle.textContent='⏸';
-      const t0=replayCamTarget(1); if(t0) Object.assign(cam, t0);   // snap to the opening frame for a clean recording
+      if(replay.enhanced) interpCam(0); else { const t0=replayCamTarget(1); if(t0) Object.assign(cam, t0); }   // snap to the opening frame
       toast(share ? 'Filming your replay to share…' : 'Recording the replay…');
     }catch(err){ toast('Could not start recording'); }
   }
@@ -1567,10 +1624,10 @@
   let guardActive=false;
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
-      || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden')
+      || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
       || replay.active || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden');
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden');
     if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
@@ -1894,22 +1951,31 @@
      your own via the mic. Plays as a preview in the picker and during Replay. */
   const musicModal=document.getElementById('musicModal'), musList=document.getElementById('musList');
   const TRACKS=[ {id:'calm',name:'Calm pad'}, {id:'chimes',name:'Music box'}, {id:'rain',name:'Rain'}, {id:'lofi',name:'Lo-fi'} ];
-  const music={ ctx:null, nodes:[], timer:0, clipURL:null, audioEl:null, recorder:null, chunks:[], stream:null };
+  const music={ ctx:null, master:null, streamDest:null, nodes:[], timer:0, clipURL:null, audioEl:null, recorder:null, chunks:[], stream:null };
   const MSCALE=[0,2,4,7,9,12];
   function musicStop(){
     if(music.timer){ clearInterval(music.timer); music.timer=0; }
     for(const n of music.nodes){ try{ n.stop&&n.stop(); }catch(e){} try{ n.disconnect&&n.disconnect(); }catch(e){} }
     music.nodes=[];
     if(music.audioEl){ try{ music.audioEl.pause(); }catch(e){} music.audioEl=null; }
-    if(music.ctx){ try{ music.ctx.close(); }catch(e){} music.ctx=null; }
+    if(music.ctx){ try{ music.ctx.close(); }catch(e){} }
+    music.ctx=null; music.master=null; music.streamDest=null;
   }
-  function musicCtx(){ if(!music.ctx) music.ctx=new (window.AudioContext||window.webkitAudioContext)(); if(music.ctx.state==='suspended') music.ctx.resume(); return music.ctx; }
+  // The master gain feeds both the speakers AND a MediaStream node, so the soundtrack can be
+  // mixed straight into the shared replay video.
+  function musicCtx(){
+    if(!music.ctx){ music.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      music.master=music.ctx.createGain(); music.master.gain.value=0.6; music.master.connect(music.ctx.destination);
+      try{ music.streamDest=music.ctx.createMediaStreamDestination(); music.master.connect(music.streamDest); }catch(e){ music.streamDest=null; } }
+    if(music.ctx.state==='suspended') music.ctx.resume(); return music.ctx;
+  }
+  function musicTrack(){ return (music.streamDest && music.streamDest.stream.getAudioTracks()[0]) || null; }
   function envNote(ac,dest,freq,when,dur,type,peak){ const o=ac.createOscillator(), g=ac.createGain();
     o.type=type||'sine'; o.frequency.value=freq;
     g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(peak||0.2,when+0.02); g.gain.exponentialRampToValueAtTime(0.0001,when+dur);
     o.connect(g); g.connect(dest); o.start(when); o.stop(when+dur+0.05); }
   function playTrack(id){
-    musicStop(); const ac=musicCtx(); const master=ac.createGain(); master.gain.value=0.5; master.connect(ac.destination); music.nodes.push(master);
+    musicStop(); const ac=musicCtx(); const master=music.master;
     if(id==='calm'){
       const filt=ac.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=900; filt.connect(master); music.nodes.push(filt);
       [110,164.81,220,277.18].forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='triangle'; o.frequency.value=f; o.detune.value=(i-1)*4;
@@ -1930,7 +1996,9 @@
       play(); music.timer=setInterval(play, 2200);
     }
   }
-  function playClip(){ musicStop(); if(!music.clipURL) return; const a=new Audio(music.clipURL); a.loop=true; a.volume=0.9; music.audioEl=a; a.play().catch(()=>{}); }
+  function playClip(){ musicStop(); if(!music.clipURL) return; const ac=musicCtx(); const a=new Audio(music.clipURL); a.loop=true; music.audioEl=a;
+    try{ a.crossOrigin='anonymous'; const src=ac.createMediaElementSource(a); src.connect(music.master); }catch(e){ a.volume=0.9; }
+    a.play().catch(()=>{}); }
   function musicPlaySelection(){ const id=state.music; if(!id){ musicStop(); return; } if(id==='custom') playClip(); else playTrack(id); }
   function setMusic(id){ state.music=id; saveSoon(); renderMusList(); if(!musicModal.classList.contains('hidden')) musicPlaySelection(); }
   function renderMusList(){ if(!musList) return; musList.innerHTML='';
@@ -1963,13 +2031,13 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-1';
+  const APP_VER='wow-2';
   const WN_ITEMS=[
-    '🎨 Colour themes — recolour the whole app in a tap',
-    '🌟 Glow room — lights-off drawing that glows',
-    '🎵 Sing your art, and add a music soundtrack',
+    '🎬 Replay now retraces your real zoom, pan & strokes',
+    '🎵 Shared replay videos include your music',
+    '🖼️ Save your drawings to an on-device gallery',
     '🌱 Magic garden that sprouts as you draw',
-    '🖼️ A gallery to save your drawings on your device',
+    '🌟 Glow room, colour themes & new papers',
     '✨ A fresh, tidier menu',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
@@ -1982,6 +2050,12 @@
     showWhatsNew(); return true; }
   if(whatsnew){ document.getElementById('wnClose').addEventListener('click', ()=>whatsnew.classList.add('hidden'));
     whatsnew.addEventListener('click', e=>{ if(e.target===whatsnew) whatsnew.classList.add('hidden'); }); }
+
+  /* ---------------- credits & acknowledgements ---------------- */
+  const creditsModal=document.getElementById('creditsModal');
+  function openCredits(){ if(!creditsModal) return; creditsModal.classList.remove('hidden'); pushGuard(); }
+  if(creditsModal){ document.getElementById('crClose').addEventListener('click', ()=>creditsModal.classList.add('hidden'));
+    creditsModal.addEventListener('click', e=>{ if(e.target===creditsModal) creditsModal.classList.add('hidden'); }); }
 
   /* ---------------- share watermark — every share advertises Ensō ---------------- */
   function drawWatermark(o, W, H){
