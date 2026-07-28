@@ -103,6 +103,7 @@
         <button class="stile" data-act="garden" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21v-7M12 14c-4 0-5-3-4-6 3 1 4 3 4 6 0-3 1-5 4-6 1 3 0 6-4 6zM12 8a2 2 0 100-4 2 2 0 000 4z"/></svg></span>Magic garden</button>
         <button class="stile" data-act="music" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 8.5a4 4 0 010 7M18.6 6a8 8 0 010 12"/></svg></span>Music</button>
         <button class="stile" data-act="sing" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm10-2a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>Sing it</button>
+        <button class="stile" data-act="inspire" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 013.5 10.9c-.6.5-1 1.2-1 2H9.5c0-.8-.4-1.5-1-2A6 6 0 0112 3z"/></svg></span>Inspire me</button>
       </div>
     </div>
 
@@ -133,8 +134,10 @@
 
     <div class="sheet-foot">
       <button data-act="install" role="menuitem">Install app</button>
+      <button data-act="tour" role="menuitem">Tour</button>
       <button data-act="intro" role="menuitem">Watch intro</button>
       <button data-act="credits" role="menuitem">Credits</button>
+      <button data-act="a11y" role="menuitem">Accessibility</button>
       <button data-act="privacy" role="menuitem">Privacy</button>
     </div>
   </div>
@@ -220,8 +223,10 @@
       <div id="musList" class="mus-list"></div>
       <div class="mus-rec">
         <button id="musRecBtn" class="mus-recbtn">● Record your own</button>
+        <button id="musUploadBtn" class="mus-recbtn">⬆ Upload a track</button>
         <span id="musRecState" class="mus-recstate"></span>
       </div>
+      <input id="musFile" type="file" accept="audio/*" hidden aria-hidden="true" />
       <div class="modal-actions">
         <button id="musNone" class="ghost">No music</button>
         <button id="musClose" class="ghost">Close</button>
@@ -250,6 +255,38 @@
       </div>
       <p class="cr-note">Inspired by the spirit of the Japanese <i lang="ja">ensō</i> — a circle drawn in a single breath — and the joy of endless paper.</p>
       <div class="modal-actions"><button id="crClose" class="primary">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Music now-playing chip (during drawing) -->
+  <div id="musicChip" class="glass hidden" role="group" aria-label="Music playing">
+    <span class="mc-note" aria-hidden="true">🎵</span><span id="mcName">Music</span>
+    <button id="mcStop" aria-label="Stop music">✕</button>
+  </div>
+
+  <!-- Guided tour (coach marks) -->
+  <div id="tour" class="hidden" role="dialog" aria-label="Quick tour">
+    <div id="tourSpot" aria-hidden="true"></div>
+    <div id="tourTip">
+      <div class="tt-step" id="tourStep"></div>
+      <h4 id="tourTitle"></h4>
+      <p id="tourText"></p>
+      <div class="tt-actions">
+        <button id="tourSkip" class="ghost">Skip</button>
+        <button id="tourNext" class="primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accessibility settings -->
+  <div id="a11yModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="a11yTitle">
+    <div class="modal-card glass">
+      <h3 id="a11yTitle">Accessibility <span aria-hidden="true">♿</span></h3>
+      <p class="muted">Make Ensō comfortable for you. Your choices are saved on this device.</p>
+      <label class="a11y-row"><span>High contrast</span><input type="checkbox" id="a11yContrast" /></label>
+      <label class="a11y-row"><span>Larger text</span><input type="checkbox" id="a11yBig" /></label>
+      <label class="a11y-row"><span>Reduce motion</span><input type="checkbox" id="a11yMotion" /></label>
+      <div class="modal-actions"><button id="a11yClose" class="primary">Done</button></div>
     </div>
   </div>
 

@@ -487,6 +487,42 @@ body.select #paper{cursor:crosshair}
 .cr-note{font-size:13px;color:var(--muted);line-height:1.65;margin:2px 0 16px}
 .cr-note i{color:var(--accent);font-style:normal}
 
+/* ---- music now-playing chip ---- */
+#musicChip{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:19;
+  display:flex;align-items:center;gap:9px;padding:8px 12px;font-size:13px;color:var(--fg)}
+#musicChip .mc-note{font-size:15px}
+#musicChip #mcStop{background:transparent;border:1px solid var(--brd);color:var(--muted);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;min-height:32px}
+#musicChip #mcStop:hover{color:var(--fg)}
+
+/* ---- accessibility settings ---- */
+.a11y-row{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid var(--brd);font-size:14.5px;color:var(--fg);cursor:pointer}
+.a11y-row:last-of-type{border-bottom:none}
+.a11y-row input{width:22px;height:22px;accent-color:var(--accent);cursor:pointer}
+
+/* ---- guided tour (coach marks) ---- */
+#tour{position:fixed;inset:0;z-index:60}
+#tour.hidden{display:none}
+#tourSpot{position:fixed;border-radius:16px;box-shadow:0 0 0 4px var(--accent),0 0 0 9999px rgba(10,10,14,.66);transition:all .32s var(--ease);pointer-events:none}
+#tourTip{position:fixed;width:280px;max-width:calc(100vw - 24px);background:var(--glass-2);border:1px solid var(--brd);border-radius:16px;box-shadow:var(--shadow);
+  padding:16px 18px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:top .3s var(--ease),left .3s var(--ease)}
+#tourTip .tt-step{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.3px;margin-bottom:4px}
+#tourTip h4{margin:0 0 5px;font-family:'Fredoka',system-ui,sans-serif;font-weight:500;font-size:18px;color:var(--fg)}
+#tourTip p{margin:0 0 14px;font-size:13.5px;line-height:1.55;color:var(--muted)}
+#tourTip .tt-actions{display:flex;gap:8px;justify-content:flex-end}
+#tourTip .tt-actions button{min-height:40px;padding:9px 16px;border-radius:10px;border:1px solid var(--brd);background:transparent;color:var(--fg);font-size:13.5px;cursor:pointer;font-family:inherit}
+#tourTip .tt-actions .primary{background:var(--accent);border-color:transparent;color:#fff;font-weight:600}
+#tourTip .tt-actions .primary:hover{background:var(--accent-2)}
+
+/* ---- accessibility modes ---- */
+body.hc{--muted:#d9d9e0;--brd:rgba(255,255,255,.34)}
+body.hc .glass{background:rgba(16,16,20,.95)}
+body.hc .stile .ti,body.hc .mus-item,body.hc .gal-card,body.hc .accdot{border:1px solid var(--brd)}
+body.bigtext .stile,body.bigtext .sheet-h{font-size:13px}
+body.bigtext .modal-card p,body.bigtext .muted,body.bigtext .a11y-row,body.bigtext .mus-item{font-size:15.5px}
+body.bigtext #toast,body.bigtext #tourTip p,body.bigtext .cr-name{font-size:16px}
+body.reduce-motion *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+body.reduce-motion .critter{display:none}
+
 /* ---- QA: consistency, focus, motion ---- */
 :where(button,[role=menuitem],input,a,label,.swatch,.favdot):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .sheet-foot button{min-height:36px}

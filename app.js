@@ -1364,6 +1364,9 @@
     else if(a==='sing') startSing();
     else if(a==='gallery') openGallery();
     else if(a==='music') openMusic();
+    else if(a==='inspire') inspireMe();
+    else if(a==='tour') startTour();
+    else if(a==='a11y') openA11y();
     else if(a==='credits') openCredits();
     else if(a==='privacy') window.open('privacy.html','_blank','noopener');
     else if(a==='clear') clearAll();
@@ -1576,6 +1579,7 @@
     musicStop();
     if(replay.rec) stopRecording();
     if(replay.savedCam){ Object.assign(cam, replay.savedCam); replay.savedCam=null; }   // restore the pre-replay view
+    if(music.chip) musicPlaySelection();                                                // resume the drawing soundtrack
     replayBar.classList.add('hidden'); document.body.classList.remove('zen'); invalidate(); }
 
   rRec.addEventListener('click',()=>{ replay.rec ? stopRecording() : startRecording(false); });
@@ -1679,9 +1683,11 @@
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
       || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
+      || !a11yModal.classList.contains('hidden') || !tour.classList.contains('hidden')
       || replay.active || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden');
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden');
+    if(tour && !tour.classList.contains('hidden')) endTour(false);
     if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
@@ -1864,6 +1870,7 @@
     clearTimeout(introTimer); el.classList.add('closing');
     setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('closing'); }, 600);
     try{ localStorage.setItem(INTRO_KEY,'1'); }catch(e){}
+    setTimeout(maybeTour, 550);   // first-timers flow straight from the intro into the guided tour
   }
   { const el=document.getElementById('intro'); if(el) el.addEventListener('click', hideIntro);
     const sk=document.getElementById('introSkip'); if(sk) sk.addEventListener('click', e=>{ e.stopPropagation(); hideIntro(); });
@@ -2005,7 +2012,7 @@
      your own via the mic. Plays as a preview in the picker and during Replay. */
   const musicModal=document.getElementById('musicModal'), musList=document.getElementById('musList');
   const TRACKS=[ {id:'calm',name:'Calm pad'}, {id:'chimes',name:'Music box'}, {id:'rain',name:'Rain'}, {id:'lofi',name:'Lo-fi'} ];
-  const music={ ctx:null, master:null, streamDest:null, nodes:[], timer:0, clipURL:null, audioEl:null, recorder:null, chunks:[], stream:null };
+  const music={ ctx:null, master:null, streamDest:null, nodes:[], timer:0, clipURL:null, clipName:'', chip:false, audioEl:null, recorder:null, chunks:[], stream:null };
   const MSCALE=[0,2,4,7,9,12];
   function musicStop(){
     if(music.timer){ clearInterval(music.timer); music.timer=0; }
@@ -2072,15 +2079,29 @@
     music.recorder.onstop=()=>{ const blob=new Blob(music.chunks,{type:(music.chunks[0]&&music.chunks[0].type)||'audio/webm'});
       try{ music.stream.getTracks().forEach(t=>t.stop()); }catch(e){} music.stream=null; music.recorder=null;
       if(music.clipURL){ try{ URL.revokeObjectURL(music.clipURL); }catch(e){} }
-      music.clipURL=URL.createObjectURL(blob); state.music='custom'; saveSoon();
+      music.clipURL=URL.createObjectURL(blob); music.clipName='Your recording'; state.music='custom'; saveSoon();
       btn.classList.remove('recording'); btn.textContent='● Record your own'; if(st) st.textContent='Saved your recording ✓'; renderMusList(); buzz(10); };
     music.recorder.start(); btn.classList.add('recording'); btn.textContent='◼ Stop recording'; if(st) st.textContent='Recording…';
   }
+  // "Now playing" chip keeps the soundtrack going while you draw
+  const musicChip=document.getElementById('musicChip');
+  function currentMusicName(){ if(state.music==='custom') return music.clipName||'Your recording'; const t=TRACKS.find(x=>x.id===state.music); return t?t.name:'Music'; }
+  function musicChipShow(){ music.chip=true; if(musicChip){ const n=document.getElementById('mcName'); if(n) n.textContent=currentMusicName(); musicChip.classList.remove('hidden'); } }
+  function musicChipHide(){ music.chip=false; if(musicChip) musicChip.classList.add('hidden'); }
+  function closeMusic(){ musicModal.classList.add('hidden'); if(state.music){ musicPlaySelection(); musicChipShow(); } else musicStop(); }
+  if(musicChip){ const s=document.getElementById('mcStop'); if(s) s.addEventListener('click',()=>{ musicStop(); musicChipHide(); buzz(6); }); }
   if(musicModal){
     document.getElementById('musRecBtn').addEventListener('click', toggleRecord);
-    document.getElementById('musNone').addEventListener('click', ()=>{ setMusic(null); musicStop(); buzz(6); toast('Music off'); });
-    document.getElementById('musClose').addEventListener('click', ()=>{ musicStop(); musicModal.classList.add('hidden'); });
-    musicModal.addEventListener('click', e=>{ if(e.target===musicModal){ musicStop(); musicModal.classList.add('hidden'); } });
+    { const uf=document.getElementById('musFile'), ub=document.getElementById('musUploadBtn');
+      if(ub) ub.addEventListener('click', ()=>uf&&uf.click());
+      if(uf) uf.addEventListener('change', e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+        if(!/^audio\//.test(f.type||'')){ toast('Please pick an audio file'); return; }
+        if(music.clipURL){ try{ URL.revokeObjectURL(music.clipURL); }catch(_){} }
+        music.clipURL=URL.createObjectURL(f); music.clipName=(f.name||'Track').replace(/\.[^.]+$/,'').slice(0,24);
+        renderMusList(); setMusic('custom'); buzz(10); toast('🎵 Added “'+music.clipName+'”'); }); }
+    document.getElementById('musNone').addEventListener('click', ()=>{ setMusic(null); musicStop(); musicChipHide(); buzz(6); toast('Music off'); });
+    document.getElementById('musClose').addEventListener('click', closeMusic);
+    musicModal.addEventListener('click', e=>{ if(e.target===musicModal) closeMusic(); });
   }
 
   /* ---------------- What's new (shown once after an update) ---------------- */
@@ -2111,6 +2132,67 @@
   if(creditsModal){ document.getElementById('crClose').addEventListener('click', ()=>creditsModal.classList.add('hidden'));
     creditsModal.addEventListener('click', e=>{ if(e.target===creditsModal) creditsModal.classList.add('hidden'); }); }
 
+  /* ---------------- Inspiration — a creative prompt ---------------- */
+  const PROMPTS=['a house for a friendly dragon','a garden on the moon','your favourite animal as a superhero',
+    'an underwater city','a robot who loves flowers','a treehouse in the clouds','a magical forest at night',
+    'a rocket made of sweets','a cat wizard casting a spell','the tallest tower you can imagine','a rainbow river',
+    'a dinosaur having a picnic','a tiny world inside a bottle','a friendly monster','a castle in the desert',
+    'a bird made of music','a snowman on a beach','a door to another world','a jellyfish parade','a city of mushrooms'];
+  let lastPrompt=-1;
+  function inspireMe(){ let i; do{ i=Math.floor(Math.random()*PROMPTS.length); }while(i===lastPrompt && PROMPTS.length>1); lastPrompt=i;
+    toast('✨ Try drawing: '+PROMPTS[i]); buzz(8); }
+
+  /* ---------------- Accessibility settings ---------------- */
+  const a11yModal=document.getElementById('a11yModal');
+  const A11Y_KEY='enso.a11y', a11y={ contrast:false, big:false, motion:false };
+  function applyA11y(){ document.body.classList.toggle('hc', a11y.contrast); document.body.classList.toggle('bigtext', a11y.big); document.body.classList.toggle('reduce-motion', a11y.motion); }
+  function saveA11y(){ try{ localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); }catch(e){} }
+  function openA11y(){ if(!a11yModal) return;
+    document.getElementById('a11yContrast').checked=a11y.contrast; document.getElementById('a11yBig').checked=a11y.big; document.getElementById('a11yMotion').checked=a11y.motion;
+    a11yModal.classList.remove('hidden'); pushGuard(); }
+  if(a11yModal){
+    const bind=(id,key)=>{ const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ a11y[key]=el.checked; applyA11y(); saveA11y(); buzz(4); }); };
+    bind('a11yContrast','contrast'); bind('a11yBig','big'); bind('a11yMotion','motion');
+    document.getElementById('a11yClose').addEventListener('click',()=>a11yModal.classList.add('hidden'));
+    a11yModal.addEventListener('click', e=>{ if(e.target===a11yModal) a11yModal.classList.add('hidden'); });
+  }
+  try{ Object.assign(a11y, JSON.parse(localStorage.getItem(A11Y_KEY)||'{}')); }catch(e){} applyA11y();
+
+  /* ---------------- Guided tour (coach marks) ---------------- */
+  const tour=document.getElementById('tour'), TOUR_KEY='enso.tour';
+  const TOUR_STEPS=[
+    { sel:null,        title:'Welcome to Ensō', text:'Draw anywhere on the endless page. Pinch or scroll to zoom — there are no edges.' },
+    { sel:'#toolBtn',  title:'Tools',           text:'Tap here for brushes, the eraser, mandala mode and stickers.' },
+    { sel:'#colorBtn', title:'Colours & size',  text:'Pick colours and palettes, or make your own. The slider sets your brush size.' },
+    { sel:'#shareBtn', title:'Share',           text:'Send your art to anyone — messages, social or email — with one tap.' },
+    { sel:'#menuBtn',  title:'Everything else', text:'Your gallery, music, layers, replay and settings all live in the menu.' },
+  ];
+  let tourI=0;
+  function tourAt(i){
+    tourI=i; const step=TOUR_STEPS[i]; if(!step){ endTour(true); return; }
+    const spot=document.getElementById('tourSpot'), tip=document.getElementById('tourTip');
+    document.getElementById('tourStep').textContent=(i+1)+' / '+TOUR_STEPS.length;
+    document.getElementById('tourTitle').textContent=step.title;
+    document.getElementById('tourText').textContent=step.text;
+    document.getElementById('tourNext').textContent = i===TOUR_STEPS.length-1 ? 'Done' : 'Next';
+    const el=step.sel && document.querySelector(step.sel);
+    const r = el ? el.getBoundingClientRect() : { left:innerWidth/2-70, top:innerHeight/2-70, width:140, height:140 };
+    const pad=8;
+    spot.style.left=(r.left-pad)+'px'; spot.style.top=(r.top-pad)+'px'; spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+    tip.style.left=clamp(r.left+r.width/2-140, 12, Math.max(12, innerWidth-292))+'px';
+    const below = r.top < innerHeight*0.5;
+    tip.style.top = below ? (r.top+r.height+pad+12)+'px' : (r.top-pad-16-tip.offsetHeight)+'px';
+  }
+  function startTour(){ if(!tour) return; toggleSheet(false); tour.classList.remove('hidden'); pushGuard(); tourAt(0);
+    requestAnimationFrame(()=>tourAt(0)); }   // re-place once the tip has measured height
+  function endTour(done){ if(!tour) return; tour.classList.add('hidden'); try{ localStorage.setItem(TOUR_KEY,'1'); }catch(e){} if(done) buzz(8); }
+  function maybeTour(){ let seen; try{ seen=localStorage.getItem(TOUR_KEY); }catch(e){ return false; } if(seen) return false; setTimeout(startTour, 450); return true; }
+  if(tour){
+    document.getElementById('tourNext').addEventListener('click',()=>{ buzz(5); tourAt(tourI+1); });
+    document.getElementById('tourSkip').addEventListener('click',()=>endTour(false));
+    addEventListener('resize', ()=>{ if(!tour.classList.contains('hidden')) tourAt(tourI); });
+  }
+
   /* ---------------- share watermark — every share advertises Ensō ---------------- */
   function drawWatermark(o, W, H){
     if(state.watermark===false) return;
@@ -2130,7 +2212,7 @@
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
   updateHud();
-  if(!maybeShowIntro()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); }
+  if(!maybeShowIntro()){ if(!maybeWhatsNew()){ if(!maybeTour()) maybeShowAppPrompt(); } }
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();
