@@ -121,7 +121,13 @@
     Earth: [{c:'#8d5524',n:'Umber'},{c:'#c68642',n:'Ochre'},{c:'#e0ac69',n:'Sand'},{c:'#7a8450',n:'Moss'},{c:'#4a6670',n:'Slate'},{c:'#a24936',n:'Clay'},{c:'#d9c8a9',n:'Bone'},{c:'#3d3b34',n:'Charcoal'},{c:'#ffffff',n:'White'}],
   };
   let activePalette = PALETTES.Classic;
-  const STICKERS = ['⭐','🌈','❤️','🌸','🦋','🐱','🐶','🌟','🍭','🎈','🌞','🍡','🐢','🌷','⚡','🍎'];
+  const STICKERS = [
+    '⭐','🌟','✨','💫','🌈','❤️','🧡','💛','💚','💙','💜','🩷','⚡','🔥','💧','❄️','☀️','🌙','☁️','🌍',
+    '🌸','🌷','🌹','🌻','🌼','🌺','🍀','🍁','🌵','🌴','🌲','🍄','🌊','🌟','🌞','🐢','🐱','🐶','🦋','🐝',
+    '🐞','🐙','🐠','🐬','🐳','🦄','🐉','🦖','🦕','🐧','🦉','🦊','🐰','🐼','🐨','🐸','🐷','🐵','🦁','🐯',
+    '🐮','🐔','🦩','🦥','🐳','🍎','🍓','🍉','🍌','🍕','🍭','🍩','🍪','🎂','🍦','🚀','🛸','⚽','🎈','🎁',
+    '👑','💎','🎵','🎨','🌟','🏰','🌟','🪄','🦕','🌟'
+  ];
 
   /* 💛 CRYPTO DONATIONS — replace the YOUR_… placeholders with your own wallet
      addresses. Delete a row you don't want. 100% free: no processor, no backend. */
@@ -589,6 +595,7 @@
       if(live && live.pts.length){
         finalizeStroke(live);
         live._ts = live._startMs - session.t0; live._td = Math.max(80, performance.now()-live._startMs);
+        noteStroke(live);
         if(live.tool==='garden'){
           const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c'); critterBurst(sp.x, sp.y);
@@ -764,12 +771,11 @@
       gDot(x-size*0.35,y-size-size*0.28,size*0.18,'#fff'), gDot(x+size*0.28,y-size-size*0.36,size*0.15,'#fff') ]; }
   function gRock(x,y,size){ const col=gpick(['#9a958c','#847f76','#a8a29a']);
     return [ gI(col, size, [{x:x-size*0.55,y:y,w:size*0.6},{x,y:y-size*0.42,w:size*1.15},{x:x+size*0.55,y:y,w:size*0.6}], true) ]; }
-  function gTree(x,y,w){ const out=[], trunk='#8d5a3c', h=w*10, top={x, y:y-h}, canopy=gpick(['#57b46a','#7ec87e','#9ad49a','#6cbf6c']);
-    out.push(gI(trunk, w*1.6, [{x,y,w:w*1.9},{x:x+(gRnd()-0.5)*h*0.1,y:y-h,w:w*0.7}]));
-    for(const s of [1,-1]) out.push(gI(trunk,w*1.1,[{x,y:y-h*0.5,w:w*0.9},{x:x+s*h*0.32,y:y-h*0.68,w:w*0.25}]));
-    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2, r=h*0.28; out.push(gDot(top.x+Math.cos(a)*r, top.y+Math.sin(a)*r*0.8, w*4, canopy)); }
-    out.push(gDot(top.x,top.y,w*5,canopy));
-    for(let i=0;i<3;i++) out.push(gDot(top.x+(gRnd()-0.5)*h*0.4, top.y+(gRnd()-0.5)*h*0.3, w*1.5, gpick(G_FLOWER)));
+  function gTree(x,y,w){ const out=[], trunk='#8d5a3c', h=w*9, top={x, y:y-h}, canopy=gpick(['#57b46a','#7ec87e','#9ad49a','#6cbf6c']);
+    out.push(gI(trunk, w*1.7, [{x,y,w:w*2},{x:x+w*0.6,y:y-h*0.55,w:w*1.2},{x,y:y-h,w:w*0.7}]));   // one clean curved trunk (no stray branches)
+    for(let i=0;i<7;i++){ const a=i/7*Math.PI*2, r=h*0.3; out.push(gDot(top.x+Math.cos(a)*r, top.y+Math.sin(a)*r*0.85, w*4.2, canopy)); }
+    out.push(gDot(top.x,top.y,w*5.4,canopy));
+    for(let i=0;i<4;i++) out.push(gDot(top.x+(gRnd()-0.5)*h*0.5, top.y+(gRnd()-0.5)*h*0.4, w*1.6, gpick(G_FLOWER)));
     return out; }
 
   // Every garden stroke grows a different living scene — leaves, vines, ferns, grass,
@@ -805,7 +811,7 @@
   // gentle drifting critters (butterfly/bee/bird/petal) rise from a finished plant
   function critterBurst(sx, sy){
     if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const kinds=['🦋','🐝','🐞','🐦','✨','🌸','🍃'], n=1+Math.floor(Math.random()*2);
+    const kinds=['🦋','🐝','🐞','🐦','🌸'], n=1+Math.floor(Math.random()*2);
     for(let i=0;i<n;i++){ const el=document.createElement('span'); el.className='critter'; el.textContent=kinds[Math.floor(Math.random()*kinds.length)];
       el.style.left=sx+'px'; el.style.top=sy+'px';
       const ang=-Math.PI/2+(Math.random()-0.5)*1.3, dist=55+Math.random()*80;
@@ -813,6 +819,15 @@
       el.style.setProperty('--cy',(Math.sin(ang)*dist-24).toFixed(0)+'px');
       el.style.animationDelay=(i*0.12)+'s';
       document.body.appendChild(el); setTimeout(()=>el.remove(), 2400); }
+    // soft glowing fireflies drift out — the magical atmosphere
+    const f=2+Math.floor(Math.random()*2);
+    for(let i=0;i<f;i++){ const el=document.createElement('span'); el.className='firefly';
+      el.style.left=sx+'px'; el.style.top=sy+'px';
+      const ang=Math.random()*Math.PI*2, dist=40+Math.random()*90;
+      el.style.setProperty('--fx',(Math.cos(ang)*dist).toFixed(0)+'px');
+      el.style.setProperty('--fy',(Math.sin(ang)*dist-40).toFixed(0)+'px');
+      el.style.animationDelay=(Math.random()*0.5).toFixed(2)+'s';
+      document.body.appendChild(el); setTimeout(()=>el.remove(), 4400); }
   }
 
   /* ---------------- symmetry (mandala) ---------------- */
@@ -1057,6 +1072,7 @@
     cam.scale = clamp(cam.scale*f, MIN_SCALE, MAX_SCALE);
     const after=toWorld(sx,sy);
     cam.x += after.x-before.x; cam.y += after.y-before.y;
+    if(cam.scale > (stats.zoom||1)) stats.zoom = cam.scale;   // tracked for the "deep diver" badge (saved on next stroke)
     updateHud();
   }
   canvas.addEventListener('wheel', e => {
@@ -1365,6 +1381,8 @@
     else if(a==='gallery') openGallery();
     else if(a==='music') openMusic();
     else if(a==='inspire') inspireMe();
+    else if(a==='presets') openPresets();
+    else if(a==='badges') openBadges();
     else if(a==='tour') startTour();
     else if(a==='a11y') openA11y();
     else if(a==='credits') openCredits();
@@ -1646,6 +1664,7 @@
   }
   async function shareImage(){
     const out=renderToCanvas(); if(!out){ toast('Draw something first ✍️'); return; }
+    stats.shares++; saveStats(); checkBadges();
     out.toBlob(async blob=>{
       const file=new File([blob],'enso-'+stamp()+'.png',{type:'image/png'});
       if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -1683,10 +1702,10 @@
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
       || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
-      || !a11yModal.classList.contains('hidden') || !tour.classList.contains('hidden')
+      || !a11yModal.classList.contains('hidden') || !tour.classList.contains('hidden') || !badgesModal.classList.contains('hidden') || !presetModal.classList.contains('hidden')
       || replay.active || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden');
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden'); badgesModal.classList.add('hidden'); presetModal.classList.add('hidden');
     if(tour && !tour.classList.contains('hidden')) endTour(false);
     if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
@@ -1870,7 +1889,6 @@
     clearTimeout(introTimer); el.classList.add('closing');
     setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('closing'); }, 600);
     try{ localStorage.setItem(INTRO_KEY,'1'); }catch(e){}
-    setTimeout(maybeTour, 550);   // first-timers flow straight from the intro into the guided tour
   }
   { const el=document.getElementById('intro'); if(el) el.addEventListener('click', hideIntro);
     const sk=document.getElementById('introSkip'); if(sk) sk.addEventListener('click', e=>{ e.stopPropagation(); hideIntro(); });
@@ -1948,15 +1966,16 @@
      The stem shows instantly; leaves and the flower scale up in a gentle stagger so
      you actually watch the plant grow. Committed as one undoable op. */
   function animateGarden(items){
-    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const decos=items.slice(1); if(!decos.length) return;
-    const now=performance.now(), stag=Math.min(70, 1000/Math.max(1,decos.length));
-    decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*stag, dur:300, ax:a.x, ay:a.y }; });
+    for(const s of strokes){ if(s._grow) delete s._grow; }              // snap any earlier sprout to finished (no half-scaled leftovers)
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){ invalidate(); return; }
+    const decos=items.slice(1); if(!decos.length){ invalidate(); return; }
+    const now=performance.now(), stag=Math.min(58, 900/Math.max(1,decos.length));
+    decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*stag, dur:340, ax:a.x, ay:a.y }; });
     cancelAnimationFrame(gardenRAF);
     const step=()=>{ const t=performance.now(); let any=false;
       for(const it of decos){ if(it._grow){ if(t < it._grow.t0+it._grow.dur) any=true; else delete it._grow; } }
       invalidate();
-      if(any) gardenRAF=requestAnimationFrame(step); else { gardenRAF=0; invalidate(); saveSoon(); } };
+      if(any) gardenRAF=requestAnimationFrame(step); else { gardenRAF=0; for(const s of strokes){ if(s._grow) delete s._grow; } invalidate(); saveSoon(); } };
     gardenRAF=requestAnimationFrame(step);
   }
 
@@ -1978,7 +1997,7 @@
       state:{theme:state.theme,grid:state.grid,axes:state.axes,paper:state.paper,palette:state.palette,accent:state.accent,glow:state.glow} };
     const list=getGallery();
     list.push({ id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4), name:'Drawing '+(list.length+1), thumb, doc:JSON.stringify(doc) });
-    if(setGallery(list)){ buzz(12); toast('Saved to your gallery ✓'); renderGallery(); }
+    if(setGallery(list)){ buzz(12); toast('Saved to your gallery ✓'); renderGallery(); stats.saved++; saveStats(); checkBadges(); }
   }
   function renderGallery(){
     const list=getGallery(); galGrid.innerHTML='';
@@ -2011,7 +2030,7 @@
      Built-in tracks are generated live with Web Audio (no files, no network); or record
      your own via the mic. Plays as a preview in the picker and during Replay. */
   const musicModal=document.getElementById('musicModal'), musList=document.getElementById('musList');
-  const TRACKS=[ {id:'calm',name:'Calm pad'}, {id:'chimes',name:'Music box'}, {id:'rain',name:'Rain'}, {id:'lofi',name:'Lo-fi'} ];
+  const TRACKS=[];   // simplified: users record their own or upload a track
   const music={ ctx:null, master:null, streamDest:null, nodes:[], timer:0, clipURL:null, clipName:'', chip:false, audioEl:null, recorder:null, chunks:[], stream:null };
   const MSCALE=[0,2,4,7,9,12];
   function musicStop(){
@@ -2066,7 +2085,8 @@
     const mk=(id,name)=>{ const b=document.createElement('button'); b.type='button'; b.className='mus-item'+(state.music===id?' on':''); b.textContent=name;
       b.addEventListener('click',()=>{ setMusic(id); buzz(6); }); return b; };
     for(const t of TRACKS) musList.appendChild(mk(t.id, t.name));
-    if(music.clipURL) musList.appendChild(mk('custom','Your recording'));
+    if(music.clipURL) musList.appendChild(mk('custom', music.clipName||'Your recording'));
+    if(!TRACKS.length && !music.clipURL){ const h=document.createElement('div'); h.className='mus-hint'; h.textContent='Record your voice or upload a track below.'; musList.appendChild(h); }
   }
   function openMusic(){ renderMusList(); musicModal.classList.remove('hidden'); pushGuard(); if(state.music) musicPlaySelection(); }
   async function toggleRecord(){
@@ -2106,14 +2126,14 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-2';
+  const APP_VER='wow-3';
   const WN_ITEMS=[
-    '🎬 Replay now retraces your real zoom, pan & strokes',
-    '🎵 Shared replay videos include your music',
-    '🖼️ Save your drawings to an on-device gallery',
-    '🌱 Magic garden that sprouts as you draw',
-    '🌟 Glow room, colour themes & new papers',
-    '✨ A fresh, tidier menu',
+    '🌱 A livelier Magic Garden — flowers, trees & fireflies',
+    '🏆 Earn badges as you create',
+    '🖊️ Save your favourite pens (My pens)',
+    '🎨 Lots more stickers to collect',
+    '🎵 Simpler music — record or upload your own',
+    '✨ A cleaner, gentler start',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
     if(list){ list.innerHTML=''; for(const t of WN_ITEMS){ const li=document.createElement('li'); li.textContent=t; list.appendChild(li); } }
@@ -2131,6 +2151,76 @@
   function openCredits(){ if(!creditsModal) return; creditsModal.classList.remove('hidden'); pushGuard(); }
   if(creditsModal){ document.getElementById('crClose').addEventListener('click', ()=>creditsModal.classList.add('hidden'));
     creditsModal.addEventListener('click', e=>{ if(e.target===creditsModal) creditsModal.classList.add('hidden'); }); }
+
+  /* ---------------- achievements / badges ---------------- */
+  const badgesModal=document.getElementById('badgesModal'), badgesGrid=document.getElementById('badgesGrid');
+  const STAT_KEY='enso.stats', BADGE_KEY='enso.badges';
+  const BADGES=[
+    { id:'first',   emoji:'🖌️', name:'First stroke',    test:s=>s.strokes>=1 },
+    { id:'busy',    emoji:'✏️', name:'Getting going',   test:s=>s.strokes>=25 },
+    { id:'artist',  emoji:'🎨', name:'Busy artist',     test:s=>s.strokes>=150 },
+    { id:'garden1', emoji:'🌱', name:'Green thumb',     test:s=>s.gardens>=1 },
+    { id:'garden8', emoji:'🌳', name:'Gardener',        test:s=>s.gardens>=8 },
+    { id:'rainbow', emoji:'🌈', name:'Rainbow magic',   test:s=>!!s.rainbow },
+    { id:'colours', emoji:'🖍️', name:'Colour explorer', test:s=>Object.keys(s.colors||{}).length>=8 },
+    { id:'mandala', emoji:'❄️', name:'Symmetry star',   test:s=>!!s.mandala },
+    { id:'zoom',    emoji:'🔭', name:'Deep diver',      test:s=>(s.zoom||1)>=50 },
+    { id:'save1',   emoji:'🖼️', name:'Keepsake',        test:s=>s.saved>=1 },
+    { id:'save5',   emoji:'📚', name:'Collector',       test:s=>s.saved>=5 },
+    { id:'share1',  emoji:'📤', name:'Sharer',          test:s=>s.shares>=1 },
+  ];
+  let stats={ strokes:0, gardens:0, saved:0, shares:0, zoom:1, colors:{}, rainbow:false, mandala:false };
+  let earnedBadges=[];
+  try{ stats=Object.assign(stats, JSON.parse(localStorage.getItem(STAT_KEY)||'{}')); }catch(e){}
+  try{ earnedBadges=JSON.parse(localStorage.getItem(BADGE_KEY)||'[]'); }catch(e){}
+  function saveStats(){ try{ localStorage.setItem(STAT_KEY, JSON.stringify(stats)); localStorage.setItem(BADGE_KEY, JSON.stringify(earnedBadges)); }catch(e){} }
+  function checkBadges(){ const newly=[];
+    for(const b of BADGES){ if(earnedBadges.indexOf(b.id)<0 && b.test(stats)){ earnedBadges.push(b.id); newly.push(b); } }
+    if(newly.length){ saveStats(); newly.forEach((b,i)=>setTimeout(()=>{ toast('🏆 Badge: '+b.name+' '+b.emoji); buzz(18); sparkleBurst(innerWidth/2, 92, '#ffd23f'); }, i*1500)); }
+  }
+  function noteStroke(s){ stats.strokes++; if(s && s.color) stats.colors[s.color]=1; if(state.rainbow) stats.rainbow=true; if(state.sym) stats.mandala=true; if(s && s.tool==='garden') stats.gardens++; saveStats(); checkBadges(); }
+  function renderBadges(){ if(!badgesGrid) return; badgesGrid.innerHTML='';
+    const sub=document.getElementById('bgSub'); if(sub) sub.textContent=earnedBadges.length+' of '+BADGES.length+' unlocked — keep creating!';
+    for(const b of BADGES){ const on=earnedBadges.indexOf(b.id)>=0;
+      const el=document.createElement('div'); el.className='badge'+(on?' earned':'');
+      const em=document.createElement('span'); em.className='bg-emoji'; em.textContent=on?b.emoji:'🔒';
+      const nm=document.createElement('span'); nm.className='bg-name'; nm.textContent=b.name;
+      el.append(em,nm); badgesGrid.appendChild(el); }
+  }
+  function openBadges(){ renderBadges(); badgesModal.classList.remove('hidden'); pushGuard(); }
+  if(badgesModal){ document.getElementById('bgClose').addEventListener('click',()=>badgesModal.classList.add('hidden'));
+    badgesModal.addEventListener('click', e=>{ if(e.target===badgesModal) badgesModal.classList.add('hidden'); }); }
+
+  /* ---------------- brush presets — "my pens" ---------------- */
+  const presetModal=document.getElementById('presetModal'), presetGrid=document.getElementById('presetGrid');
+  const PRESET_KEY='enso.presets';
+  let presets=[]; try{ presets=JSON.parse(localStorage.getItem(PRESET_KEY)||'[]'); }catch(e){}
+  function savePresets(){ try{ localStorage.setItem(PRESET_KEY, JSON.stringify(presets)); }catch(e){} }
+  function saveCurrentPreset(){
+    const p={ id:'p'+Date.now().toString(36), tool:isDrawStyle(state.tool)?state.tool:lastBrushStyle, size:state.size, color:state.color, rainbow:!!state.rainbow };
+    presets.unshift(p); if(presets.length>12) presets.pop(); savePresets(); renderPresets(); buzz(10); toast('Pen saved ✓');
+  }
+  function applyPreset(p){ selectTool(p.tool); state.size=p.size; if(sizeRange) sizeRange.value=p.size;
+    if(p.rainbow){ state.rainbow=true; sw.querySelectorAll('.swatch').forEach(n=>n.classList.remove('active')); if(rainbowEl) rainbowEl.classList.add('active'); updateBrushDot(); }
+    else setColor(p.color);
+    buzz(6); toast('Pen ready'); presetModal.classList.add('hidden'); }
+  function deletePreset(id){ presets=presets.filter(p=>p.id!==id); savePresets(); renderPresets(); buzz(6); }
+  function renderPresets(){ if(!presetGrid) return; presetGrid.innerHTML='';
+    if(!presets.length){ const e=document.createElement('div'); e.className='preset-empty'; e.textContent='No pens yet — set a brush, colour and size, then tap “Save current pen”.'; presetGrid.appendChild(e); return; }
+    for(const p of presets){ const st=STYLES[p.tool]||STYLES.brush;
+      const wrap=document.createElement('div'); wrap.className='preset-wrap';
+      const card=document.createElement('button'); card.type='button'; card.className='preset-card';
+      const dot=document.createElement('span'); dot.className='pr-dot'; dot.style.background=p.rainbow?'conic-gradient(from 0deg,#ff4d4f,#ffd21a,#37c86b,#20b8e6,#9a5bff,#ff4d4f)':p.color;
+      const lbl=document.createElement('span'); lbl.className='pr-lbl'; lbl.textContent=(st.emoji||'🖌️')+' '+Math.round(p.size);
+      card.append(dot,lbl); card.addEventListener('click',()=>applyPreset(p));
+      const del=document.createElement('button'); del.type='button'; del.className='pr-del'; del.setAttribute('aria-label','Delete pen'); del.textContent='✕';
+      del.addEventListener('click',e=>{ e.stopPropagation(); deletePreset(p.id); });
+      wrap.append(card, del); presetGrid.appendChild(wrap); }
+  }
+  function openPresets(){ renderPresets(); presetModal.classList.remove('hidden'); pushGuard(); }
+  if(presetModal){ document.getElementById('prSave').addEventListener('click', saveCurrentPreset);
+    document.getElementById('prClose').addEventListener('click',()=>presetModal.classList.add('hidden'));
+    presetModal.addEventListener('click', e=>{ if(e.target===presetModal) presetModal.classList.add('hidden'); }); }
 
   /* ---------------- Inspiration — a creative prompt ---------------- */
   const PROMPTS=['a house for a friendly dragon','a garden on the moon','your favourite animal as a superhero',
@@ -2161,11 +2251,9 @@
   /* ---------------- Guided tour (coach marks) ---------------- */
   const tour=document.getElementById('tour'), TOUR_KEY='enso.tour';
   const TOUR_STEPS=[
-    { sel:null,        title:'Welcome to Ensō', text:'Draw anywhere on the endless page. Pinch or scroll to zoom — there are no edges.' },
-    { sel:'#toolBtn',  title:'Tools',           text:'Tap here for brushes, the eraser, mandala mode and stickers.' },
-    { sel:'#colorBtn', title:'Colours & size',  text:'Pick colours and palettes, or make your own. The slider sets your brush size.' },
-    { sel:'#shareBtn', title:'Share',           text:'Send your art to anyone — messages, social or email — with one tap.' },
-    { sel:'#menuBtn',  title:'Everything else', text:'Your gallery, music, layers, replay and settings all live in the menu.' },
+    { sel:null,        title:'Welcome to Ensō', text:'Draw anywhere — the page never ends. Pinch or scroll to zoom.' },
+    { sel:'#colorBtn', title:'Colours & brush', text:'Tap here for colours, palettes and your brush size.' },
+    { sel:'#menuBtn',  title:'Everything else', text:'Brushes, gallery, music, sharing and more live in the menu.' },
   ];
   let tourI=0;
   function tourAt(i){
@@ -2212,7 +2300,8 @@
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
   updateHud();
-  if(!maybeShowIntro()){ if(!maybeWhatsNew()){ if(!maybeTour()) maybeShowAppPrompt(); } }
+  // Simple onboarding: first-timers get a short guided tour (the long intro is optional, via Menu → Watch intro)
+  if(!maybeTour()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); }
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();

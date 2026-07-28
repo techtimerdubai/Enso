@@ -463,6 +463,7 @@ body.select #paper{cursor:crosshair}
 .mus-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 0 12px}
 .mus-item{padding:12px;border-radius:11px;border:1px solid var(--brd);background:rgba(255,255,255,.05);color:var(--fg);font-size:13px;cursor:pointer}
 .mus-item.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:600}
+.mus-hint{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;padding:8px 0}
 .mus-rec{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .mus-recbtn{padding:10px 14px;border-radius:11px;border:1px solid var(--brd);background:transparent;color:var(--fg);font-size:13px;cursor:pointer}
 .mus-recbtn.recording{background:#e0503a;border-color:transparent;color:#fff}
@@ -523,6 +524,24 @@ body.bigtext #toast,body.bigtext #tourTip p,body.bigtext .cr-name{font-size:16px
 body.reduce-motion *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 body.reduce-motion .critter{display:none}
 
+/* ---- badges ---- */
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 14px;max-height:52dvh;overflow-y:auto}
+.badge{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--brd);text-align:center;opacity:.5}
+.badge.earned{opacity:1;background:rgba(255,210,63,.12);border-color:rgba(255,210,63,.42)}
+.bg-emoji{font-size:26px;line-height:1}
+.bg-name{font-size:11.5px;color:var(--fg);line-height:1.2}
+
+/* ---- presets: my pens ---- */
+.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 2px 14px;max-height:48dvh;overflow-y:auto}
+.preset-empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;padding:18px 6px;line-height:1.5}
+.preset-wrap{position:relative}
+.preset-card{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 6px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--brd);cursor:pointer;color:var(--fg)}
+.preset-card:hover{background:rgba(255,255,255,.1)}
+.pr-dot{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.pr-lbl{font-size:12.5px}
+.pr-del{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:var(--glass-2);border:1px solid var(--brd);color:var(--muted);font-size:12px;cursor:pointer;line-height:1}
+.pr-del:hover{color:#ff8266}
+
 /* ---- QA: consistency, focus, motion ---- */
 :where(button,[role=menuitem],input,a,label,.swatch,.favdot):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .sheet-foot button{min-height:36px}
@@ -541,9 +560,16 @@ body.reduce-motion .critter{display:none}
   0%{transform:translate(-50%,-50%) scale(.3);opacity:0}
   16%{opacity:1}
   100%{transform:translate(calc(-50% + var(--cx)),calc(-50% + var(--cy))) scale(1) rotate(8deg);opacity:0}}
+.firefly{position:fixed;z-index:39;pointer-events:none;width:7px;height:7px;border-radius:50%;will-change:transform,opacity;
+  background:radial-gradient(circle,#fff7bd 0%,#ffd23f 45%,rgba(255,210,63,0) 72%);box-shadow:0 0 9px 2px rgba(255,220,90,.7);
+  animation:fireflyDrift 4.4s ease-in-out forwards}
+@keyframes fireflyDrift{
+  0%{transform:translate(-50%,-50%) scale(.4);opacity:0}
+  14%{opacity:1}50%{opacity:.55}76%{opacity:1}
+  100%{transform:translate(calc(-50% + var(--fx)),calc(-50% + var(--fy))) scale(1);opacity:0}}
 
 @media (prefers-reduced-motion:reduce){
-  #sheet,.modal,.sparkle,.clear-anim,#toast,.critter{animation:none!important}
-  .critter{display:none}
+  #sheet,.modal,.sparkle,.clear-anim,#toast,.critter,.firefly{animation:none!important}
+  .critter,.firefly{display:none}
   *{scroll-behavior:auto!important}
 }
