@@ -45,6 +45,8 @@
     pendingStamp: null,      // {dataURL, img, size} awaiting placement
     paper: 'dots',           // paper theme (cream · sky · kraft · dots · grid)
     palette: 'Classic',      // active colour palette
+    accent: 'verm',          // UI accent theme — recolours the whole app + icon
+    glow: false,             // Glow room: lights-off, every stroke glows
   };
   let rainbowHue = 0;
   let lastBrushStyle = 'brush';
@@ -61,6 +63,8 @@
     crayon:      { label:'Crayon',       emoji:'🖍', wp:0.45, ws:0.05, taper:2, alpha:0.9, jitter:0.5, blend:'multiply' },
     calligraphy: { label:'Calligraphy',  emoji:'🪶', calli:true, taper:3 },
     neon:        { label:'Neon glow',    emoji:'💡', wp:0.4,  ws:0.1,  taper:4, neon:true },
+    water:       { label:'Watercolour',  emoji:'💧', wp:0.6,  ws:0.04, taper:2, alpha:0.5, blend:'multiply', water:true },
+    garden:      { label:'Magic garden', emoji:'🌱', wp:0.5,  ws:0.08, taper:3, garden:true },
   };
   const isDrawStyle = t => STYLES[t] != null;
 
@@ -71,14 +75,28 @@
     { c:'#2f6bff', n:'Blue' },   { c:'#9a5bff', n:'Purple' }, { c:'#ff5fa2', n:'Pink' },
     { c:'#a2673f', n:'Brown' },  { c:'#ffffff', n:'White' },
   ];
-  // Paper themes — background colour + optional pattern
+  // Paper themes — background colour + optional pattern (dark flag for light strokes)
   const PAPERS = [
+    { id:'dots',  label:'Dots',  bg:'#f7f4ee', pat:'dots' },
+    { id:'grid',  label:'Grid',  bg:'#f7f4ee', pat:'grid' },
     { id:'cream', label:'Cream', bg:'#f7f4ee', pat:null },
     { id:'sky',   label:'Sky',   bg:'#e9f1f8', pat:null },
     { id:'kraft', label:'Kraft', bg:'#e8dcc4', pat:null },
-    { id:'dots',  label:'Dots',  bg:'#f7f4ee', pat:'dots' },
-    { id:'grid',  label:'Grid',  bg:'#f7f4ee', pat:'grid' },
+    { id:'sakura',label:'Sakura',bg:'#fbeef0', pat:null },
+    { id:'midnight', label:'Midnight',   bg:'#141726', pat:null, dark:true },
+    { id:'blackboard', label:'Blackboard', bg:'#1f2a24', pat:null, dark:true },
   ];
+  // UI accent themes — recolour the whole app (buttons, brand, links) + the tab icon
+  const ACCENTS = [
+    { id:'verm',   name:'Vermillion', c:'#e0503a', c2:'#c0433a' },
+    { id:'purple', name:'Magic purple', c:'#9a5bff', c2:'#7d43e0' },
+    { id:'ocean',  name:'Ocean', c:'#1aa5b0', c2:'#158791' },
+    { id:'sakura', name:'Sakura', c:'#ff6f9c', c2:'#e5547f' },
+    { id:'gold',   name:'Gold', c:'#e6a90c', c2:'#c48f08' },
+    { id:'indigo', name:'Indigo', c:'#6d7bff', c2:'#5563e6' },
+    { id:'forest', name:'Forest', c:'#2fae6b', c2:'#249058' },
+  ];
+  const accentById = id => ACCENTS.find(a=>a.id===id) || ACCENTS[0];
   // Switchable colour palettes (kid-friendly, harmonised)
   const PALETTES = {
     Classic: PALETTE,
@@ -98,7 +116,8 @@
     { sym:'SOL',  name:'Solana',                 addr:'YOUR_SOL_ADDRESS',  scheme:'solana' },
     { sym:'TON',  name:'Toncoin',                addr:'YOUR_TON_ADDRESS',  scheme:'ton' },
   ];
-  const paperColor = () => state.theme === 'dark' ? '#17181c'
+  const paperColor = () => state.glow ? '#07070c'
+    : state.theme === 'dark' ? '#17181c'
     : ((PAPERS.find(x=>x.id===state.paper) || PAPERS[0]).bg);
 
   /* ---------------- persistence ---------------- */
@@ -106,7 +125,7 @@
   let quotaWarned = false;
   const save = () => { try {
     localStorage.setItem(KEY, JSON.stringify({ strokes: serialize(strokes), cam, layers, activeLayer, nextLayerId,
-      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap, paper:state.paper, palette:state.palette } }));
+      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap, paper:state.paper, palette:state.palette, accent:state.accent, glow:state.glow } }));
   } catch(e){ if(!quotaWarned){ quotaWarned = true; toast('Storage full — older work may not auto-save. Export to keep it.'); } } };
   const saveSoon = debounce(save, 400);
   function serialize(list){ return list.map(s => s.tool==='stamp'
@@ -118,7 +137,8 @@
     layers=[{id:1,name:'Layer 1',visible:true,opacity:1}]; activeLayer=1; nextLayerId=2;
     if(d.cam) Object.assign(cam, d.cam);
     if(d.state){ state.theme=d.state.theme||state.theme; state.grid=d.state.grid!==false; state.axes=d.state.axes||6; state.shapeSnap=!!d.state.shape;
-      state.paper=d.state.paper || (d.state.grid===false?'cream':'dots'); state.palette=d.state.palette||'Classic'; }
+      state.paper=d.state.paper || (d.state.grid===false?'cream':'dots'); state.palette=d.state.palette||'Classic';
+      state.accent=d.state.accent||'verm'; state.glow=!!d.state.glow; }
     if(Array.isArray(d.layers) && d.layers.length){ layers=d.layers; activeLayer=d.activeLayer||layers[0].id; nextLayerId=d.nextLayerId||(Math.max(...layers.map(l=>l.id))+1); }
     if(Array.isArray(d.strokes)) for(const s of d.strokes){
       if(s.tool==='stamp'){ const st=makeStamp(s.dataURL, s.x, s.y, s.size, undefined, s.ar, s.rot); st.layer=s.layer||layers[0].id; strokes.push(st); }
@@ -174,6 +194,7 @@
   function paintPaper(){
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.fillStyle = paperColor(); ctx.fillRect(0,0,innerWidth,innerHeight);
+    if(state.glow) return;                           // Glow room: clean black field
     const p = PAPERS.find(x=>x.id===state.paper) || PAPERS[0];
     if(p.pat==='dots') drawGrid(ctx);
     else if(p.pat==='grid') drawGridLines(ctx);
@@ -216,6 +237,7 @@
     }
     if(state.sym) drawSymGuide();
     if(state.tool==='select') drawSelectionOverlay();
+    if(state.singing) drawSingHead();
   }
 
   function viewRect(){ const a=toWorld(0,0), b=toWorld(innerWidth,innerHeight);
@@ -313,7 +335,8 @@
     if(!s.snapped) src = smooth(src);   // snapped shapes keep their crisp corners
     const st = STYLES[s.tool];
     const runs = clip ? clipRuns(src, clip) : [src];
-    if(st && st.neon){ drawNeon(target, s, runs); return; }
+    if((st && st.neon) || (state.glow && s.tool!=='eraser')){ drawNeon(target, s, runs); return; }
+    if(st && st.water){ drawWater(target, s, runs); return; }
     setComposite(target, s.tool);
     target.fillStyle = s.color;
     for(const run of runs){
@@ -325,12 +348,28 @@
 
   // Neon: soft wide glow + brighter core, layered.
   function drawNeon(target, s, runs){
-    target.globalCompositeOperation = state.theme==='dark' ? 'lighter' : 'source-over';
+    target.globalCompositeOperation = (state.theme==='dark' || state.glow) ? 'lighter' : 'source-over';
     const passes = [ [2.8, 0.18, s.color], [1.7, 0.35, s.color], [0.75, 1, lighten(s.color)] ];
     for(const [wm, a, col] of passes){
       target.globalAlpha = a; target.fillStyle = col;
       for(const run of runs){
         if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4/cam.scale,run[0].w/2*wm), 0, 7); target.fill(); }
+        else fillRibbon(target, run, wm);
+      }
+    }
+    resetComposite(target);
+  }
+
+  // Watercolour "living ink": soft translucent bleed — a wide halo fading into a denser
+  // core, drawn multiply (screen on dark) so overlapping washes deepen like real paint.
+  function drawWater(target, s, runs){
+    const dark = state.theme==='dark' || state.glow;
+    target.globalCompositeOperation = dark ? 'screen' : 'multiply';
+    target.fillStyle = s.color;
+    for(const [wm, a] of [[2.7,0.05],[2.0,0.07],[1.4,0.11],[1.0,0.2]]){
+      target.globalAlpha = a;
+      for(const run of runs){
+        if(run.length === 1){ target.beginPath(); target.arc(run[0].x, run[0].y, Math.max(.4/cam.scale, run[0].w/2*wm), 0, 7); target.fill(); }
         else fillRibbon(target, run, wm);
       }
     }
@@ -451,7 +490,7 @@
 
     drawingId = e.pointerId; redoStack.length = 0;
     const w = toWorld(e.clientX, e.clientY);
-    const col = state.rainbow ? nextRainbow() : state.color;
+    const col = state.tool==='garden' ? '#4a9d54' : (state.rainbow ? nextRainbow() : state.color);
     // width is stored in WORLD units, so divide the screen-px slider size by the zoom:
     // brushes then paint the SAME on-screen thickness at any zoom (WYSIWYG), and zooming
     // in yields finer world strokes → effectively unlimited detail on the endless canvas.
@@ -501,12 +540,17 @@
     if(drawingId===e.pointerId){
       if(live && live.pts.length){
         finalizeStroke(live);
-        if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
-          const shaped=recognizeShape(live);
-          if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind);
-            const bb=live.bb; if(bb){ const sp=worldToScreen((bb.minX+bb.maxX)/2,(bb.minY+bb.maxY)/2); sparkleBurst(sp.x, sp.y, live.color); } }
+        if(live.tool==='garden'){
+          const items=growGarden(live); commit(items); buzz(12);
+          const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c');
+        } else {
+          if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
+            const shaped=recognizeShape(live);
+            if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind);
+              const bb=live.bb; if(bb){ const sp=worldToScreen((bb.minX+bb.maxX)/2,(bb.minY+bb.maxY)/2); sparkleBurst(sp.x, sp.y, live.color); } }
+          }
+          commit(state.sym ? [live, ...symCopies(live)] : [live]);
         }
-        commit(state.sym ? [live, ...symCopies(live)] : [live]);
       }
       live=null; drawingId=null; requestRender();
     }
@@ -624,6 +668,50 @@
   }
 
   function nextRainbow(){ rainbowHue = (rainbowHue + 47) % 360; return `hsl(${rainbowHue} 85% 55%)`; }
+
+  /* ---------------- Magic garden ----------------
+     A stem stroke sprouts leaves along its length and a little flower at the tip.
+     Everything is generated as ordinary vector strokes, so it's undoable and stays
+     razor-sharp at any zoom, just like hand-drawn ink. */
+  function samplePath(pts, f){
+    const n=pts.length; if(n<2) return { x:pts[0].x, y:pts[0].y, tx:0, ty:-1 };
+    const idx=clamp(f,0,1)*(n-1), i=Math.min(n-2, Math.floor(idx)), t=idx-i;
+    const a=pts[i], b=pts[i+1]; let tx=b.x-a.x, ty=b.y-a.y; const L=Math.hypot(tx,ty)||1;
+    return { x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t, tx:tx/L, ty:ty/L };
+  }
+  function growGarden(stem){
+    const pts=stem.pts, items=[stem];
+    if(pts.length<2) return items;
+    let total=0; for(let i=1;i<pts.length;i++) total+=Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    const w=stem.size||6/cam.scale;
+    if(total < w*5) return items;                       // too short — just a sprout, no leaves
+    const leafLen=Math.max(w*7, total*0.16);
+    const nLeaves=clamp(Math.floor(total/(w*11)), 2, 8);
+    const leafCols=['#3f9d52','#57b46a','#2f8f49'];
+    for(let k=1;k<=nLeaves;k++){
+      const f=k/(nLeaves+1), P=samplePath(pts,f), side=(k%2?1:-1);
+      const nx=-P.ty*side, ny=P.tx*side;                // outward normal, alternating sides
+      const bx=P.x, by=P.y;
+      const tx=bx+(nx*0.85+P.tx*0.45)*leafLen, ty=by+(ny*0.85+P.ty*0.45)*leafLen;
+      const mx=(bx+tx)/2+nx*leafLen*0.22, my=(by+ty)/2+ny*leafLen*0.22;
+      const lw=w*1.5;
+      const leaf={ tool:'brush', color:leafCols[k%leafCols.length], size:lw, layer:stem.layer, snapped:false,
+        pts:[{x:bx,y:by,w:lw*0.45},{x:mx,y:my,w:lw},{x:tx,y:ty,w:lw*0.2}] };
+      finalizeBB(leaf); items.push(leaf);
+    }
+    // flower at the tip
+    const tip=pts[pts.length-1];
+    const petalCol=['#ff6f9c','#ffd23f','#ff8c42','#9a5bff','#ff5d5d','#4db6ff','#ff7ab0'][Math.floor(Math.random()*7)];
+    const R=Math.max(w*3.2, leafLen*0.55), petals=5+Math.floor(Math.random()*3);
+    for(let p=0;p<petals;p++){ const a=p/petals*Math.PI*2;
+      const petal={ tool:'brush', color:petalCol, size:w*1.7, layer:stem.layer, snapped:false,
+        pts:[{x:tip.x,y:tip.y,w:w*0.6},{x:tip.x+Math.cos(a)*R,y:tip.y+Math.sin(a)*R,w:w*1.7},{x:tip.x+Math.cos(a+0.55)*R*0.5,y:tip.y+Math.sin(a+0.55)*R*0.5,w:w*0.5}] };
+      finalizeBB(petal); items.push(petal);
+    }
+    const center={ tool:'brush', color:'#ffd23f', size:w*2.2, layer:stem.layer, snapped:false, pts:[{x:tip.x,y:tip.y,w:w*2.2}] };
+    finalizeBB(center); items.push(center);
+    return items;
+  }
 
   /* ---------------- symmetry (mandala) ---------------- */
   function symCopies(stroke){
@@ -1011,10 +1099,33 @@
   // colour-palette switcher + paper picker (top of the colour tray)
   function setPalette(name){ if(!PALETTES[name]) name='Classic'; state.palette=name; activePalette=PALETTES[name];
     renderPalette(); renderFavs(); document.querySelectorAll('.palchip').forEach(c=>c.classList.toggle('on', c.dataset.pal===name)); updateBrushDot(); saveSoon(); }
-  function setPaper(id){ if(!PAPERS.some(p=>p.id===id)) id='cream'; state.paper=id;
+  function setPaper(id){ if(!PAPERS.some(p=>p.id===id)) id='dots'; state.paper=id;
     document.querySelectorAll('.papertile').forEach(t=>t.classList.toggle('on', t.dataset.paper===id)); invalidate(); saveSoon(); }
+  // App accent — recolours every UI element (they all use var(--accent)) + the tab icon
+  function faviconURL(hex){
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#141419"/>'
+      +'<path d="M300 150 a120 120 0 1 0 78 96" fill="none" stroke="'+hex+'" stroke-width="34" stroke-linecap="round" transform="rotate(18 256 256)"/>'
+      +'<path d="M356 220 q26 24 20 60" fill="none" stroke="'+hex+'" stroke-width="16" stroke-linecap="round"/></svg>';
+    return 'data:image/svg+xml,'+encodeURIComponent(svg);
+  }
+  function setAccent(id){
+    const a=accentById(id); state.accent=a.id;
+    const r=document.documentElement.style; r.setProperty('--accent', a.c); r.setProperty('--accent-2', a.c2);
+    const fav=document.querySelector('link[rel="icon"]'); if(fav) fav.href=faviconURL(a.c);
+    document.querySelectorAll('.accdot').forEach(d=>d.classList.toggle('on', d.dataset.acc===a.id));
+    saveSoon();
+  }
+  // Glow room — lights-off mode: black field, every stroke glows (routes through the neon engine)
+  function toggleGlow(force){ const on = force!==undefined ? force : !state.glow; state.glow=on;
+    document.body.classList.toggle('glowroom', on);
+    toast(on ? '🌟 Glow room — lights off. Try bright colours!' : 'Glow room off');
+    invalidate(); saveSoon(); buzz(8); }
   (function buildPickers(){
     const tray=document.getElementById('colorTray');
+    const accRow=document.createElement('div'); accRow.id='accentRow'; accRow.setAttribute('aria-label','App colour');
+    ACCENTS.forEach(a=>{ const b=document.createElement('button'); b.type='button'; b.className='accdot'; b.dataset.acc=a.id;
+      b.title='App colour: '+a.name; b.setAttribute('aria-label','App colour '+a.name); b.style.background=a.c;
+      b.addEventListener('click',()=>{ setAccent(a.id); buzz(6); toast('App colour: '+a.name); }); accRow.appendChild(b); });
     const palRow=document.createElement('div'); palRow.id='paletteRow';
     Object.keys(PALETTES).forEach(name=>{ const c=document.createElement('button'); c.type='button'; c.className='palchip'; c.dataset.pal=name; c.textContent=name;
       c.addEventListener('click',()=>{ setPalette(name); buzz(6); }); palRow.appendChild(c); });
@@ -1026,6 +1137,7 @@
       t.addEventListener('click',()=>{ setPaper(p.id); buzz(6); }); paperRow.appendChild(t); });
     tray.insertBefore(paperRow, tray.firstChild);
     tray.insertBefore(palRow, tray.firstChild);
+    tray.insertBefore(accRow, tray.firstChild);
   })();
   // sparkle burst — fired on shape-snap and sticker placement
   function sparkleBurst(sx, sy, color){
@@ -1139,6 +1251,11 @@
     else if(a==='intro') showIntro();
     else if(a==='install') doInstall();
     else if(a==='layers') openLayers();
+    else if(a==='glow') toggleGlow();
+    else if(a==='garden'){ selectTool('garden'); toast('🌱 Draw a stem — watch it grow!'); }
+    else if(a==='breathe') startBreathe();
+    else if(a==='sing') startSing();
+    else if(a==='spiro') openSpiro();
     else if(a==='donate') openDonate();
     else if(a==='clear') clearAll();
   }));
@@ -1391,7 +1508,7 @@
   function exportPNG(){ const out=renderToCanvas(); if(!out){ toast('Nothing to export yet'); return; } out.toBlob(b=>downloadBlob(b,'enso-'+stamp()+'.png'),'image/png'); }
   // save / open an editable Ensō document file (real backup + sharing)
   function exportDoc(){
-    const data=JSON.stringify({ v:2, strokes:serialize(strokes), cam, layers, activeLayer, nextLayerId, state:{theme:state.theme,grid:state.grid,axes:state.axes,paper:state.paper,palette:state.palette} });
+    const data=JSON.stringify({ v:2, strokes:serialize(strokes), cam, layers, activeLayer, nextLayerId, state:{theme:state.theme,grid:state.grid,axes:state.axes,paper:state.paper,palette:state.palette,accent:state.accent,glow:state.glow} });
     downloadBlob(new Blob([data],{type:'application/json'}), 'enso-'+stamp()+'.enso.json'); toast('Saved file ✓');
   }
   function importDoc(){
@@ -1439,11 +1556,11 @@
   let guardActive=false;
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
-      || !donateModal.classList.contains('hidden')
-      || replay.active || document.body.classList.contains('zen') || !!state.pendingStamp; }
+      || !donateModal.classList.contains('hidden') || !spiroModal.classList.contains('hidden')
+      || replay.active || state.breathing || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden');
-    if(replay.active) exitReplay(); document.body.classList.remove('zen'); clearPendingStamp(); }
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); spiroModal.classList.add('hidden');
+    if(replay.active) exitReplay(); stopBreathe(); stopSing(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
   // click on modal backdrop closes it
@@ -1632,8 +1749,128 @@
     document.addEventListener('visibilitychange', ()=>{ const x=document.getElementById('intro'); if(!document.hidden && x && !x.classList.contains('hidden')) playIntro(x); }); }
   function maybeShowIntro(){ try{ if(localStorage.getItem(INTRO_KEY)) return false; }catch(e){ return false; } showIntro(); return true; }
 
+  /* ---------------- One-breath Ensō (guided calm) ---------------- */
+  function startBreathe(){
+    const el=document.getElementById('breathe'); if(!el) return;
+    if(!isDrawStyle(state.tool)) selectTool(lastBrushStyle);
+    state.breathing=true; el.classList.remove('hidden'); document.body.classList.add('breathing');
+    pushGuard(); buzz(6);
+  }
+  function stopBreathe(){ const el=document.getElementById('breathe'); if(el) el.classList.add('hidden');
+    document.body.classList.remove('breathing'); state.breathing=false; }
+  { const bc=document.getElementById('breatheClose'); if(bc) bc.addEventListener('click', e=>{ e.stopPropagation(); stopBreathe(); }); }
+
+  /* ---------------- Sing your drawing (Web Audio) ----------------
+     A playhead sweeps left→right; each mark plays a soft note whose pitch comes from
+     its height (top = high). Pitches snap to a major-pentatonic scale so it always
+     sounds pleasant. 100% offline — nothing leaves the device. */
+  const sing = { t:0, bb:null };
+  let singRAF=0, singCtx=null;
+  const PENT=[0,2,4,7,9];
+  function yToFreq(y, minY, maxY){
+    const t=clamp(1-(y-minY)/((maxY-minY)||1), 0, 1);
+    const steps=Math.round(t*14), oct=Math.floor(steps/5), deg=steps%5;
+    return 196*Math.pow(2, (PENT[deg]+12*oct)/12);      // base ~G3
+  }
+  function buildSong(bb){
+    const evs=[], span=(bb.maxX-bb.minX)||1;
+    for(const s of strokes){
+      if(s.tool==='eraser') continue;
+      let samp;
+      if(s.tool==='stamp') samp=[{x:s.x,y:s.y}];
+      else { const p=s.pts; if(!p||!p.length) continue; samp=[p[0], p[p.length>>1], p[p.length-1]]; }
+      for(const pt of samp) evs.push({ t:(pt.x-bb.minX)/span, freq:yToFreq(pt.y,bb.minY,bb.maxY) });
+    }
+    evs.sort((a,b)=>a.t-b.t);
+    return evs;
+  }
+  function drawSingHead(){
+    if(!sing.bb) return;
+    const wx=sing.bb.minX + (sing.bb.maxX-sing.bb.minX)*sing.t, sx=(wx+cam.x)*cam.scale;
+    ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
+    const g=ctx.createLinearGradient(sx-14,0,sx+14,0);
+    g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(.5,'rgba(255,255,255,.5)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(sx-14,0,28,innerHeight);
+    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent')||'#e0503a';
+    ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,innerHeight); ctx.stroke();
+    ctx.restore();
+  }
+  function startSing(){
+    if(state.singing){ stopSing(); return; }
+    const bb=bounds(); if(!bb || !strokes.length){ toast('Draw something to hear it 🎵'); return; }
+    let evs=buildSong(bb); if(!evs.length){ toast('Draw something to hear it 🎵'); return; }
+    if(evs.length>140){ const step=Math.ceil(evs.length/140); evs=evs.filter((_,i)=>i%step===0); }
+    const dur=clamp(evs.length*0.09, 3.5, 12);
+    const w=bb.maxX-bb.minX, h=bb.maxY-bb.minY;
+    const sc=clamp(Math.min(innerWidth/w, innerHeight/h)*0.82, MIN_SCALE, 8);
+    animateCam(innerWidth/(2*sc)-(bb.minX+w/2), innerHeight/(2*sc)-(bb.minY+h/2), sc, 400);
+    try{ singCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ toast('Audio not supported here'); return; }
+    const ac=singCtx; if(ac.state==='suspended') ac.resume();
+    const master=ac.createGain(); master.gain.value=0.26; master.connect(ac.destination);
+    const t0=ac.currentTime+0.5;
+    for(const e of evs){ const when=t0+e.t*dur, o=ac.createOscillator(), g=ac.createGain();
+      o.type='triangle'; o.frequency.value=e.freq;
+      g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.9, when+0.02); g.gain.exponentialRampToValueAtTime(0.0001, when+0.5);
+      o.connect(g); g.connect(master); o.start(when); o.stop(when+0.55); }
+    sing.bb=bb; sing.t=0; state.singing=true; document.body.classList.add('singing');
+    const bar=document.getElementById('singBar'); if(bar) bar.classList.remove('hidden');
+    const startMs=performance.now()+500, durMs=dur*1000;
+    cancelAnimationFrame(singRAF);
+    const sweep=()=>{ const t=clamp((performance.now()-startMs)/durMs, 0, 1); sing.t=t; requestRender();
+      if(t<1 && state.singing) singRAF=requestAnimationFrame(sweep); else if(state.singing) setTimeout(stopSing, 400); };
+    singRAF=requestAnimationFrame(sweep);
+    toast('🎵 Playing your drawing…'); pushGuard();
+  }
+  function stopSing(){ if(!state.singing) return; state.singing=false; cancelAnimationFrame(singRAF); singRAF=0;
+    const bar=document.getElementById('singBar'); if(bar) bar.classList.add('hidden'); document.body.classList.remove('singing');
+    if(singCtx){ try{ singCtx.close(); }catch(e){} singCtx=null; } invalidate(); }
+  { const sc=document.getElementById('singStop'); if(sc) sc.addEventListener('click', stopSing); }
+
+  /* ---------------- Spirograph (hypotrochoid rosettes) ---------------- */
+  const spiroModal=document.getElementById('spiroModal');
+  const spiroCanvas=document.getElementById('spiroCanvas');
+  const spiroPetals=document.getElementById('spiroPetals'), spiroDepth=document.getElementById('spiroDepth');
+  function spiroPoints(petals, depth){
+    const R=petals, r=Math.max(1, petals-1), a=R-r, d=r*depth;
+    const steps=Math.max(360, petals*120), turns=r, out=[];
+    for(let i=0;i<=steps;i++){ const th=i/steps*2*Math.PI*turns;
+      out.push({ x:a*Math.cos(th)+d*Math.cos((a/r)*th), y:a*Math.sin(th)-d*Math.sin((a/r)*th) }); }
+    return out;
+  }
+  function drawSpiroPreview(){
+    if(!spiroCanvas) return; const c=spiroCanvas, x=c.getContext('2d'), W=c.width, H=c.height;
+    x.clearRect(0,0,W,H);
+    const pts=spiroPoints(+spiroPetals.value, +spiroDepth.value/100);
+    let mx=0; for(const p of pts) mx=Math.max(mx, Math.abs(p.x), Math.abs(p.y));
+    const s=(Math.min(W,H)/2-10)/(mx||1);
+    x.save(); x.translate(W/2,H/2); x.beginPath();
+    pts.forEach((p,i)=>{ const px=p.x*s, py=p.y*s; i?x.lineTo(px,py):x.moveTo(px,py); });
+    x.strokeStyle=state.rainbow ? '#9a5bff' : (validHex(state.color)?state.color:'#e0503a'); x.lineWidth=2; x.lineJoin='round'; x.stroke(); x.restore();
+  }
+  function openSpiro(){ if(!spiroModal) return; spiroModal.classList.remove('hidden'); drawSpiroPreview(); pushGuard(); }
+  function addSpiro(){
+    const pts=spiroPoints(+spiroPetals.value, +spiroDepth.value/100);
+    let mx=0; for(const p of pts) mx=Math.max(mx, Math.abs(p.x), Math.abs(p.y));
+    const ctr=toWorld(innerWidth/2, innerHeight/2);
+    const rad=(0.34*Math.min(innerWidth,innerHeight))/cam.scale, s=rad/(mx||1);
+    const col=state.rainbow ? nextRainbow() : state.color, w=Math.max(1.5, state.size*0.5)/cam.scale;
+    const stroke={ tool:'brush', color:col, size:w, layer:activeLayer, snapped:true,
+      pts:pts.map(p=>({ x:ctr.x+p.x*s, y:ctr.y+p.y*s, w })) };
+    finalizeBB(stroke); redoStack.length=0; commit([stroke]);
+    spiroModal.classList.add('hidden'); buzz(12); toast('🌀 Spirograph added'); sparkleBurst(innerWidth/2, innerHeight/2, col);
+  }
+  if(spiroModal){
+    spiroPetals.addEventListener('input', drawSpiroPreview);
+    spiroDepth.addEventListener('input', drawSpiroPreview);
+    document.getElementById('spiroAdd').addEventListener('click', addSpiro);
+    document.getElementById('spiroClose').addEventListener('click', ()=>spiroModal.classList.add('hidden'));
+    spiroModal.addEventListener('click', e=>{ if(e.target===spiroModal) spiroModal.classList.add('hidden'); });
+  }
+
   /* ---------------- boot ---------------- */
-  load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); updateHud();
+  load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
+  if(state.glow) document.body.classList.add('glowroom');
+  updateHud();
   if(!maybeShowIntro()) maybeShowAppPrompt();
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);

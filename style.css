@@ -417,3 +417,43 @@ body.select #paper{cursor:crosshair}
   #intro .iz,#intro .gal,#intro .cap{opacity:0}
   #intro .fin{opacity:1!important;transform:none!important}
 }
+
+/* ---- wow pack: app-colour picker, glow room, spirograph, one-breath, sing ---- */
+#accentRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid var(--brd)}
+.accdot{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;position:relative}
+.accdot.on{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.accdot::after{content:'';position:absolute;inset:-8px}
+.papertile{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.papertile.on{box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+
+/* spirograph modal */
+.spiro-preview{display:grid;place-items:center;margin:14px 0}
+#spiroCanvas{width:min(260px,64vw);height:auto;aspect-ratio:1;background:rgba(255,255,255,.04);border-radius:14px;border:1px solid var(--brd)}
+.spiro-row{display:flex;align-items:center;gap:12px;margin:12px 0;font-size:13.5px}
+.spiro-row span{width:52px;color:var(--muted);flex:0 0 auto}
+.spiro-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:6px;background:var(--muted);outline:none}
+.spiro-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--fg);cursor:pointer}
+.spiro-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-radius:50%;background:var(--fg);cursor:pointer}
+
+/* sing playback bar */
+#singBar{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;
+  display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13.5px;color:var(--fg)}
+#singBar .sing-note{font-size:16px}
+#singBar #singStop{background:transparent;border:1px solid var(--brd);color:var(--fg);border-radius:9px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+
+/* one-breath guided overlay */
+#breathe{position:fixed;inset:0;z-index:24;pointer-events:none;display:grid;place-items:center;
+  background:radial-gradient(120% 120% at 50% 45%, rgba(8,8,12,.12), rgba(8,8,12,.44))}
+#breathe.hidden{display:none}
+.breathe-stage{position:relative;width:min(64vmin,360px);height:min(64vmin,360px);display:grid;place-items:center}
+.breathe-ring{position:absolute;width:70%;height:70%;border-radius:50%;border:4px solid var(--accent);opacity:.85;animation:b_scale 8s ease-in-out infinite}
+.breathe-glow{position:absolute;width:70%;height:70%;border-radius:50%;background:var(--accent);opacity:.16;filter:blur(30px);animation:b_scale 8s ease-in-out infinite}
+.breathe-word{position:absolute;font-family:'Fredoka',system-ui,sans-serif;font-size:21px;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.55)}
+.b-in{animation:b_inW 8s ease-in-out infinite}
+.b-out{animation:b_outW 8s ease-in-out infinite}
+.breathe-hint{position:absolute;bottom:19%;left:0;right:0;text-align:center;color:#fff;opacity:.82;font-size:14px;text-shadow:0 1px 10px rgba(0,0,0,.55)}
+.breathe-close{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:16px;pointer-events:auto;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:20px;padding:8px 18px;font-size:14px;cursor:pointer;font-family:'Fredoka',system-ui,sans-serif}
+@keyframes b_scale{0%,100%{transform:scale(.55)}50%{transform:scale(1.06)}}
+@keyframes b_inW{0%,100%{opacity:0}12%{opacity:1}44%{opacity:1}52%{opacity:0}}
+@keyframes b_outW{0%,50%{opacity:0}62%{opacity:1}94%{opacity:1}100%{opacity:0}}

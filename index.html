@@ -100,6 +100,11 @@
       <button data-act="svg" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 6l-4 6 4 6M16 6l4 6-4 6"/></svg></span>SVG</button>
       <button data-act="replay" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.6M20 4v4h-4"/></svg></span>Replay</button>
       <button data-act="layers" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4l8 4.5-8 4.5-8-4.5zM4 13l8 4.5 8-4.5"/></svg></span>Layers</button>
+      <button data-act="sing" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm10-2a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>Sing it</button>
+      <button data-act="garden" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21v-7M12 14c-4 0-5-3-4-6 3 1 4 3 4 6 0-3 1-5 4-6 1 3 0 6-4 6zM12 8a2 2 0 100-4 2 2 0 000 4z"/></svg></span>Magic garden</button>
+      <button data-act="spiro" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12m-9 0a9 9 0 1018 0 9 9 0 10-18 0M12 12m-5 0a5 5 0 108 3"/></svg></span>Spirograph</button>
+      <button data-act="glow" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6L5 5M18 6l1-1M6 18l-1 1M18 18l1 1M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg></span>Glow room</button>
+      <button data-act="breathe" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></span>One breath</button>
       <button data-act="shapesnap" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4l1.6 4.8L18.5 10l-4.9 1.2L12 16l-1.6-4.8L5.5 10l4.9-1.2z"/></svg></span>Shape snap</button>
       <button data-act="seal" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5h2a2 2 0 012 2v2H6v-2a2 2 0 012-2h2zM6 19h12"/></svg></span>Ink seal</button>
       <button data-act="symaxes" role="menuitem"><span class="mi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7"/></svg></span>Mandala <em id="axesLabel">6</em></button>
@@ -171,6 +176,39 @@
       <div id="stickerGrid" class="sticker-grid"></div>
       <div class="modal-actions"><button id="stickerClose" class="ghost">Close</button></div>
     </div>
+  </div>
+
+  <!-- Spirograph generator -->
+  <div id="spiroModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="spiroTitle">
+    <div class="modal-card glass">
+      <h3 id="spiroTitle">Spirograph <span aria-hidden="true">🌀</span></h3>
+      <p class="muted">Spin a hypnotic rosette, then drop it on the canvas in your current colour.</p>
+      <div class="spiro-preview"><canvas id="spiroCanvas" width="300" height="300" role="img" aria-label="Spirograph preview"></canvas></div>
+      <label class="spiro-row"><span>Petals</span><input id="spiroPetals" type="range" min="3" max="16" value="7" aria-label="Petals" /></label>
+      <label class="spiro-row"><span>Depth</span><input id="spiroDepth" type="range" min="20" max="100" value="70" aria-label="Depth" /></label>
+      <div class="modal-actions">
+        <button id="spiroAdd" class="primary">Add to canvas</button>
+        <button id="spiroClose" class="ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- One-breath Ensō guide -->
+  <div id="breathe" class="hidden" aria-hidden="true">
+    <div class="breathe-stage">
+      <span class="breathe-glow"></span>
+      <span class="breathe-ring"></span>
+      <span class="breathe-word b-in">Breathe in…</span>
+      <span class="breathe-word b-out">Breathe out…</span>
+    </div>
+    <p class="breathe-hint">Draw your circle in one calm breath</p>
+    <button id="breatheClose" class="breathe-close" aria-label="End one-breath">Done</button>
+  </div>
+
+  <!-- Sing playback bar -->
+  <div id="singBar" class="glass hidden" role="group" aria-label="Playing your drawing">
+    <span class="sing-note" aria-hidden="true">🎵</span><span>Playing your drawing…</span>
+    <button id="singStop" aria-label="Stop">✕ Stop</button>
   </div>
 
   <!-- Replay overlay -->
