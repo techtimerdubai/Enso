@@ -47,7 +47,10 @@
     palette: 'Classic',      // active colour palette
     accent: 'verm',          // UI accent theme — recolours the whole app + icon
     glow: false,             // Glow room: lights-off, every stroke glows
+    music: null,             // soundtrack id ('calm'|'chimes'|'rain'|'lofi'|'custom'|null)
+    watermark: true,         // subtle "Made with Ensō" mark on shared images
   };
+  let gardenRAF = 0;         // magic-garden sprout animation
   let rainbowHue = 0;
   let lastBrushStyle = 'brush';
 
@@ -125,7 +128,7 @@
   let quotaWarned = false;
   const save = () => { try {
     localStorage.setItem(KEY, JSON.stringify({ strokes: serialize(strokes), cam, layers, activeLayer, nextLayerId,
-      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap, paper:state.paper, palette:state.palette, accent:state.accent, glow:state.glow } }));
+      state:{ theme:state.theme, grid:state.grid, axes:state.axes, shape:state.shapeSnap, paper:state.paper, palette:state.palette, accent:state.accent, glow:state.glow, music:(state.music==='custom'?null:state.music) } }));
   } catch(e){ if(!quotaWarned){ quotaWarned = true; toast('Storage full — older work may not auto-save. Export to keep it.'); } } };
   const saveSoon = debounce(save, 400);
   function serialize(list){ return list.map(s => s.tool==='stamp'
@@ -138,7 +141,7 @@
     if(d.cam) Object.assign(cam, d.cam);
     if(d.state){ state.theme=d.state.theme||state.theme; state.grid=d.state.grid!==false; state.axes=d.state.axes||6; state.shapeSnap=!!d.state.shape;
       state.paper=d.state.paper || (d.state.grid===false?'cream':'dots'); state.palette=d.state.palette||'Classic';
-      state.accent=d.state.accent||'verm'; state.glow=!!d.state.glow; }
+      state.accent=d.state.accent||'verm'; state.glow=!!d.state.glow; state.music=(d.state.music==='custom'?null:(d.state.music||null)); }
     if(Array.isArray(d.layers) && d.layers.length){ layers=d.layers; activeLayer=d.activeLayer||layers[0].id; nextLayerId=d.nextLayerId||(Math.max(...layers.map(l=>l.id))+1); }
     if(Array.isArray(d.strokes)) for(const s of d.strokes){
       if(s.tool==='stamp'){ const st=makeStamp(s.dataURL, s.x, s.y, s.size, undefined, s.ar, s.rot); st.layer=s.layer||layers[0].id; strokes.push(st); }
@@ -261,6 +264,12 @@
       // LOD: skip items too small to see at the current zoom (huge win on big, zoomed-out docs)
       if(s.bb && (s.bb.maxX-s.bb.minX)*cam.scale < 0.6 && (s.bb.maxY-s.bb.minY)*cam.scale < 0.6) continue;
       if(s.tool==='stamp') drawStampItem(target, s);
+      else if(s._grow){                               // magic-garden sprout: scale up about the base
+        const gp=clamp((performance.now()-s._grow.t0)/s._grow.dur,0,1);
+        if(gp>0){ const e=1-Math.pow(1-gp,3);
+          target.save(); target.translate(s._grow.ax, s._grow.ay); target.scale(e,e); target.translate(-s._grow.ax,-s._grow.ay);
+          drawStroke(target, s, 0, clip); target.restore(); }
+      }
       else drawStroke(target, s, revealHere < len ? Math.ceil(revealHere) : 0, clip);
     }
   }
@@ -541,7 +550,7 @@
       if(live && live.pts.length){
         finalizeStroke(live);
         if(live.tool==='garden'){
-          const items=growGarden(live); commit(items); buzz(12);
+          const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c');
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
@@ -1253,11 +1262,10 @@
     else if(a==='layers') openLayers();
     else if(a==='glow') toggleGlow();
     else if(a==='garden'){ selectTool('garden'); toast('🌱 Draw a stem — watch it grow!'); }
-    else if(a==='breathe') startBreathe();
     else if(a==='sing') startSing();
-    else if(a==='spiro') openSpiro();
+    else if(a==='gallery') openGallery();
+    else if(a==='music') openMusic();
     else if(a==='privacy') window.open('privacy.html','_blank','noopener');
-    else if(a==='donate') openDonate();
     else if(a==='clear') clearAll();
   }));
   const axesLabel=document.getElementById('axesLabel');
@@ -1424,6 +1432,7 @@
     replay.savedCam={ x:cam.x, y:cam.y, scale:cam.scale };   // restore the view on exit
     const t0=replayCamTarget(1); if(t0) Object.assign(cam, t0);   // open framed on the first marks
     replayBar.classList.remove('hidden'); rToggle.textContent='⏸'; toggleZen(true); pushGuard();
+    if(state.music) musicPlaySelection();
     cancelAnimationFrame(replay.raf); loopReplay();
   }
   function loopReplay(){
@@ -1454,6 +1463,7 @@
   rSeek.addEventListener('input',()=>{ replay.playing=false; rToggle.textContent='▶'; replay.elapsed=(+rSeek.value/1000)*replay.dur*1000; replay.last=performance.now(); });
   document.getElementById('replayExit').addEventListener('click', exitReplay);
   function exitReplay(){ replay.active=false; replay.playing=false; replay.outro=0; cancelAnimationFrame(replay.raf);
+    musicStop();
     if(replay.rec) stopRecording();
     if(replay.savedCam){ Object.assign(cam, replay.savedCam); replay.savedCam=null; }   // restore the pre-replay view
     replayBar.classList.add('hidden'); document.body.classList.remove('zen'); invalidate(); }
@@ -1504,7 +1514,7 @@
     const ink=document.createElement('canvas'); ink.width=out.width; ink.height=out.height;
     const i=ink.getContext('2d'); i.setTransform(scale,0,0,scale,-bb.minX*scale,-bb.minY*scale);
     for(const s of strokes){ if(s.tool==='stamp') drawStampItem(i,s); else drawStroke(i,s,0); }
-    o.drawImage(ink,0,0); return out;
+    o.drawImage(ink,0,0); drawWatermark(o, out.width, out.height); return out;
   }
   function exportPNG(){ const out=renderToCanvas(); if(!out){ toast('Nothing to export yet'); return; } out.toBlob(b=>downloadBlob(b,'enso-'+stamp()+'.png'),'image/png'); }
   // save / open an editable Ensō document file (real backup + sharing)
@@ -1557,11 +1567,11 @@
   let guardActive=false;
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
-      || !donateModal.classList.contains('hidden') || !spiroModal.classList.contains('hidden')
-      || replay.active || state.breathing || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
+      || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden')
+      || replay.active || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); spiroModal.classList.add('hidden');
-    if(replay.active) exitReplay(); stopBreathe(); stopSing(); document.body.classList.remove('zen'); clearPendingStamp(); }
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden');
+    if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
   // click on modal backdrop closes it
@@ -1750,17 +1760,6 @@
     document.addEventListener('visibilitychange', ()=>{ const x=document.getElementById('intro'); if(!document.hidden && x && !x.classList.contains('hidden')) playIntro(x); }); }
   function maybeShowIntro(){ try{ if(localStorage.getItem(INTRO_KEY)) return false; }catch(e){ return false; } showIntro(); return true; }
 
-  /* ---------------- One-breath Ensō (guided calm) ---------------- */
-  function startBreathe(){
-    const el=document.getElementById('breathe'); if(!el) return;
-    if(!isDrawStyle(state.tool)) selectTool(lastBrushStyle);
-    state.breathing=true; el.classList.remove('hidden'); document.body.classList.add('breathing');
-    pushGuard(); buzz(6);
-  }
-  function stopBreathe(){ const el=document.getElementById('breathe'); if(el) el.classList.add('hidden');
-    document.body.classList.remove('breathing'); state.breathing=false; }
-  { const bc=document.getElementById('breatheClose'); if(bc) bc.addEventListener('click', e=>{ e.stopPropagation(); stopBreathe(); }); }
-
   /* ---------------- Sing your drawing (Web Audio) ----------------
      A playhead sweeps left→right; each mark plays a soft note whose pitch comes from
      its height (top = high). Pitches snap to a major-pentatonic scale so it always
@@ -1827,52 +1826,183 @@
     if(singCtx){ try{ singCtx.close(); }catch(e){} singCtx=null; } invalidate(); }
   { const sc=document.getElementById('singStop'); if(sc) sc.addEventListener('click', stopSing); }
 
-  /* ---------------- Spirograph (hypotrochoid rosettes) ---------------- */
-  const spiroModal=document.getElementById('spiroModal');
-  const spiroCanvas=document.getElementById('spiroCanvas');
-  const spiroPetals=document.getElementById('spiroPetals'), spiroDepth=document.getElementById('spiroDepth');
-  function spiroPoints(petals, depth){
-    const R=petals, r=Math.max(1, petals-1), a=R-r, d=r*depth;
-    const steps=Math.max(360, petals*120), turns=r, out=[];
-    for(let i=0;i<=steps;i++){ const th=i/steps*2*Math.PI*turns;
-      out.push({ x:a*Math.cos(th)+d*Math.cos((a/r)*th), y:a*Math.sin(th)-d*Math.sin((a/r)*th) }); }
-    return out;
+  /* ---------------- Magic garden sprout animation ----------------
+     The stem shows instantly; leaves and the flower scale up in a gentle stagger so
+     you actually watch the plant grow. Committed as one undoable op. */
+  function animateGarden(items){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const decos=items.slice(1); if(!decos.length) return;
+    const now=performance.now();
+    decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*70, dur:300, ax:a.x, ay:a.y }; });
+    cancelAnimationFrame(gardenRAF);
+    const step=()=>{ const t=performance.now(); let any=false;
+      for(const it of decos){ if(it._grow){ if(t < it._grow.t0+it._grow.dur) any=true; else delete it._grow; } }
+      invalidate();
+      if(any) gardenRAF=requestAnimationFrame(step); else { gardenRAF=0; invalidate(); saveSoon(); } };
+    gardenRAF=requestAnimationFrame(step);
   }
-  function drawSpiroPreview(){
-    if(!spiroCanvas) return; const c=spiroCanvas, x=c.getContext('2d'), W=c.width, H=c.height;
-    x.clearRect(0,0,W,H);
-    const pts=spiroPoints(+spiroPetals.value, +spiroDepth.value/100);
-    let mx=0; for(const p of pts) mx=Math.max(mx, Math.abs(p.x), Math.abs(p.y));
-    const s=(Math.min(W,H)/2-10)/(mx||1);
-    x.save(); x.translate(W/2,H/2); x.beginPath();
-    pts.forEach((p,i)=>{ const px=p.x*s, py=p.y*s; i?x.lineTo(px,py):x.moveTo(px,py); });
-    x.strokeStyle=state.rainbow ? '#9a5bff' : (validHex(state.color)?state.color:'#e0503a'); x.lineWidth=2; x.lineJoin='round'; x.stroke(); x.restore();
+
+  /* ---------------- Gallery — my drawings (saved on this device) ---------------- */
+  const galleryModal=document.getElementById('galleryModal'), galGrid=document.getElementById('galGrid');
+  const GAL_KEY='enso.gallery';
+  function getGallery(){ try{ return JSON.parse(localStorage.getItem(GAL_KEY)||'[]'); }catch(e){ return []; } }
+  function setGallery(list){ try{ localStorage.setItem(GAL_KEY, JSON.stringify(list)); return true; }
+    catch(e){ if(list.length>1){ list.shift(); return setGallery(list); } toast('Storage full — export to keep it instead'); return false; } }
+  function thumbURL(){ const out=renderToCanvas(); if(!out) return null;
+    const S=240, sc=Math.min(1, S/Math.max(out.width,out.height));
+    const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(out.width*sc)); c.height=Math.max(1,Math.round(out.height*sc));
+    const x=c.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(out,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',0.72); }
+  function saveCurrentToGallery(){
+    if(!strokes.length){ toast('Draw something first ✍️'); return; }
+    const thumb=thumbURL(); if(!thumb){ toast('Nothing to save yet'); return; }
+    const doc={ v:2, strokes:serialize(strokes), cam, layers, activeLayer, nextLayerId,
+      state:{theme:state.theme,grid:state.grid,axes:state.axes,paper:state.paper,palette:state.palette,accent:state.accent,glow:state.glow} };
+    const list=getGallery();
+    list.push({ id:'g'+Date.now().toString(36)+Math.floor(Math.random()*1e4), name:'Drawing '+(list.length+1), thumb, doc:JSON.stringify(doc) });
+    if(setGallery(list)){ buzz(12); toast('Saved to your gallery ✓'); renderGallery(); }
   }
-  function openSpiro(){ if(!spiroModal) return; spiroModal.classList.remove('hidden'); drawSpiroPreview(); pushGuard(); }
-  function addSpiro(){
-    const pts=spiroPoints(+spiroPetals.value, +spiroDepth.value/100);
-    let mx=0; for(const p of pts) mx=Math.max(mx, Math.abs(p.x), Math.abs(p.y));
-    const ctr=toWorld(innerWidth/2, innerHeight/2);
-    const rad=(0.34*Math.min(innerWidth,innerHeight))/cam.scale, s=rad/(mx||1);
-    const col=state.rainbow ? nextRainbow() : state.color, w=Math.max(1.5, state.size*0.5)/cam.scale;
-    const stroke={ tool:'brush', color:col, size:w, layer:activeLayer, snapped:true,
-      pts:pts.map(p=>({ x:ctr.x+p.x*s, y:ctr.y+p.y*s, w })) };
-    finalizeBB(stroke); redoStack.length=0; commit([stroke]);
-    spiroModal.classList.add('hidden'); buzz(12); toast('🌀 Spirograph added'); sparkleBurst(innerWidth/2, innerHeight/2, col);
+  function renderGallery(){
+    const list=getGallery(); galGrid.innerHTML='';
+    if(!list.length){ const e=document.createElement('div'); e.className='gal-empty'; e.textContent='No saved drawings yet — tap “Save current”.'; galGrid.appendChild(e); return; }
+    for(let i=list.length-1;i>=0;i--){ const it=list[i];
+      const card=document.createElement('div'); card.className='gal-card';
+      const img=document.createElement('img'); img.className='gal-thumb'; img.src=it.thumb; img.alt=it.name; img.loading='lazy';
+      img.addEventListener('click',()=>openFromGallery(it.id));
+      const row=document.createElement('div'); row.className='gal-row';
+      const nm=document.createElement('span'); nm.className='gal-name'; nm.textContent=it.name;
+      const del=document.createElement('button'); del.className='gal-del'; del.setAttribute('aria-label','Delete'); del.textContent='✕';
+      del.addEventListener('click',e=>{ e.stopPropagation(); deleteGalleryItem(it.id); });
+      row.append(nm, del); card.append(img, row); galGrid.appendChild(card);
+    }
   }
-  if(spiroModal){
-    spiroPetals.addEventListener('input', drawSpiroPreview);
-    spiroDepth.addEventListener('input', drawSpiroPreview);
-    document.getElementById('spiroAdd').addEventListener('click', addSpiro);
-    document.getElementById('spiroClose').addEventListener('click', ()=>spiroModal.classList.add('hidden'));
-    spiroModal.addEventListener('click', e=>{ if(e.target===spiroModal) spiroModal.classList.add('hidden'); });
+  function openFromGallery(id){ const it=getGallery().find(x=>x.id===id); if(!it) return;
+    try{ applyDoc(JSON.parse(it.doc)); setAccent(state.accent); setPalette(state.palette); setPaper(state.paper);
+      document.body.classList.toggle('glowroom', !!state.glow); updateSelBar(); updateHud(); invalidate(); save(); }
+    catch(e){ toast('Could not open that drawing'); return; }
+    galleryModal.classList.add('hidden'); buzz(8); toast('Opened ✓'); }
+  function deleteGalleryItem(id){ setGallery(getGallery().filter(x=>x.id!==id)); renderGallery(); buzz(8); }
+  function openGallery(){ renderGallery(); galleryModal.classList.remove('hidden'); pushGuard(); }
+  if(galleryModal){
+    document.getElementById('galSave').addEventListener('click', saveCurrentToGallery);
+    document.getElementById('galClose').addEventListener('click', ()=>galleryModal.classList.add('hidden'));
+    galleryModal.addEventListener('click', e=>{ if(e.target===galleryModal) galleryModal.classList.add('hidden'); });
+  }
+
+  /* ---------------- Music — a soundtrack for the drawing (offline) ----------------
+     Built-in tracks are generated live with Web Audio (no files, no network); or record
+     your own via the mic. Plays as a preview in the picker and during Replay. */
+  const musicModal=document.getElementById('musicModal'), musList=document.getElementById('musList');
+  const TRACKS=[ {id:'calm',name:'Calm pad'}, {id:'chimes',name:'Music box'}, {id:'rain',name:'Rain'}, {id:'lofi',name:'Lo-fi'} ];
+  const music={ ctx:null, nodes:[], timer:0, clipURL:null, audioEl:null, recorder:null, chunks:[], stream:null };
+  const MSCALE=[0,2,4,7,9,12];
+  function musicStop(){
+    if(music.timer){ clearInterval(music.timer); music.timer=0; }
+    for(const n of music.nodes){ try{ n.stop&&n.stop(); }catch(e){} try{ n.disconnect&&n.disconnect(); }catch(e){} }
+    music.nodes=[];
+    if(music.audioEl){ try{ music.audioEl.pause(); }catch(e){} music.audioEl=null; }
+    if(music.ctx){ try{ music.ctx.close(); }catch(e){} music.ctx=null; }
+  }
+  function musicCtx(){ if(!music.ctx) music.ctx=new (window.AudioContext||window.webkitAudioContext)(); if(music.ctx.state==='suspended') music.ctx.resume(); return music.ctx; }
+  function envNote(ac,dest,freq,when,dur,type,peak){ const o=ac.createOscillator(), g=ac.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(peak||0.2,when+0.02); g.gain.exponentialRampToValueAtTime(0.0001,when+dur);
+    o.connect(g); g.connect(dest); o.start(when); o.stop(when+dur+0.05); }
+  function playTrack(id){
+    musicStop(); const ac=musicCtx(); const master=ac.createGain(); master.gain.value=0.5; master.connect(ac.destination); music.nodes.push(master);
+    if(id==='calm'){
+      const filt=ac.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=900; filt.connect(master); music.nodes.push(filt);
+      [110,164.81,220,277.18].forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='triangle'; o.frequency.value=f; o.detune.value=(i-1)*4;
+        g.gain.value=0.12; o.connect(g); g.connect(filt); o.start(); music.nodes.push(o,g); });
+      const lfo=ac.createOscillator(), lg=ac.createGain(); lfo.frequency.value=0.06; lg.gain.value=350; lfo.connect(lg); lg.connect(filt.frequency); lfo.start(); music.nodes.push(lfo,lg);
+    } else if(id==='chimes'){
+      music.timer=setInterval(()=>{ if(!music.ctx) return; const t=music.ctx.currentTime, deg=MSCALE[Math.floor(Math.random()*MSCALE.length)]+12*(Math.random()<0.4?1:0);
+        envNote(music.ctx, master, 392*Math.pow(2,deg/12), t+0.02, 1.6, 'sine', 0.28); }, 900);
+    } else if(id==='rain'){
+      const buf=ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.5;
+      const src=ac.createBufferSource(); src.buffer=buf; src.loop=true; const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1200; bp.Q.value=0.7;
+      const g=ac.createGain(); g.gain.value=0.22; src.connect(bp); bp.connect(g); g.connect(master); src.start(); music.nodes.push(src,bp,g);
+      music.timer=setInterval(()=>{ if(!music.ctx) return; envNote(music.ctx, master, 1400+Math.random()*1600, music.ctx.currentTime+0.02, 0.25, 'sine', 0.05); }, 260);
+    } else if(id==='lofi'){
+      const chords=[[130.81,164.81,196],[146.83,174.61,220],[164.81,196,246.94],[110,138.59,164.81]]; let ci=0;
+      const filt=ac.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=1200; filt.connect(master); music.nodes.push(filt);
+      const play=()=>{ if(!music.ctx) return; const t=music.ctx.currentTime; chords[ci%chords.length].forEach(f=>envNote(music.ctx, filt, f, t+0.02, 2.4, 'triangle', 0.14)); ci++; };
+      play(); music.timer=setInterval(play, 2200);
+    }
+  }
+  function playClip(){ musicStop(); if(!music.clipURL) return; const a=new Audio(music.clipURL); a.loop=true; a.volume=0.9; music.audioEl=a; a.play().catch(()=>{}); }
+  function musicPlaySelection(){ const id=state.music; if(!id){ musicStop(); return; } if(id==='custom') playClip(); else playTrack(id); }
+  function setMusic(id){ state.music=id; saveSoon(); renderMusList(); if(!musicModal.classList.contains('hidden')) musicPlaySelection(); }
+  function renderMusList(){ if(!musList) return; musList.innerHTML='';
+    const mk=(id,name)=>{ const b=document.createElement('button'); b.type='button'; b.className='mus-item'+(state.music===id?' on':''); b.textContent=name;
+      b.addEventListener('click',()=>{ setMusic(id); buzz(6); }); return b; };
+    for(const t of TRACKS) musList.appendChild(mk(t.id, t.name));
+    if(music.clipURL) musList.appendChild(mk('custom','Your recording'));
+  }
+  function openMusic(){ renderMusList(); musicModal.classList.remove('hidden'); pushGuard(); if(state.music) musicPlaySelection(); }
+  async function toggleRecord(){
+    const btn=document.getElementById('musRecBtn'), st=document.getElementById('musRecState');
+    if(music.recorder){ try{ music.recorder.stop(); }catch(e){} return; }
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){ toast('Recording not supported here'); return; }
+    try{ musicStop(); music.stream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ toast('Microphone permission needed'); return; }
+    music.chunks=[]; music.recorder=new MediaRecorder(music.stream);
+    music.recorder.ondataavailable=e=>{ if(e.data.size) music.chunks.push(e.data); };
+    music.recorder.onstop=()=>{ const blob=new Blob(music.chunks,{type:(music.chunks[0]&&music.chunks[0].type)||'audio/webm'});
+      try{ music.stream.getTracks().forEach(t=>t.stop()); }catch(e){} music.stream=null; music.recorder=null;
+      if(music.clipURL){ try{ URL.revokeObjectURL(music.clipURL); }catch(e){} }
+      music.clipURL=URL.createObjectURL(blob); state.music='custom'; saveSoon();
+      btn.classList.remove('recording'); btn.textContent='● Record your own'; if(st) st.textContent='Saved your recording ✓'; renderMusList(); buzz(10); };
+    music.recorder.start(); btn.classList.add('recording'); btn.textContent='◼ Stop recording'; if(st) st.textContent='Recording…';
+  }
+  if(musicModal){
+    document.getElementById('musRecBtn').addEventListener('click', toggleRecord);
+    document.getElementById('musNone').addEventListener('click', ()=>{ setMusic(null); musicStop(); buzz(6); toast('Music off'); });
+    document.getElementById('musClose').addEventListener('click', ()=>{ musicStop(); musicModal.classList.add('hidden'); });
+    musicModal.addEventListener('click', e=>{ if(e.target===musicModal){ musicStop(); musicModal.classList.add('hidden'); } });
+  }
+
+  /* ---------------- What's new (shown once after an update) ---------------- */
+  const whatsnew=document.getElementById('whatsnew');
+  const APP_VER='wow-1';
+  const WN_ITEMS=[
+    '🎨 Colour themes — recolour the whole app in a tap',
+    '🌟 Glow room — lights-off drawing that glows',
+    '🎵 Sing your art, and add a music soundtrack',
+    '🌱 Magic garden that sprouts as you draw',
+    '🖼️ A gallery to save your drawings on your device',
+    '✨ A fresh, tidier menu',
+  ];
+  function showWhatsNew(){ const list=document.getElementById('wnList');
+    if(list){ list.innerHTML=''; for(const t of WN_ITEMS){ const li=document.createElement('li'); li.textContent=t; list.appendChild(li); } }
+    whatsnew.classList.remove('hidden'); pushGuard(); }
+  function maybeWhatsNew(){ let seen, introSeen;
+    try{ seen=localStorage.getItem('enso.seenver'); introSeen=localStorage.getItem(INTRO_KEY); }catch(e){ return false; }
+    try{ localStorage.setItem('enso.seenver', APP_VER); }catch(e){}
+    if(seen===APP_VER || !introSeen) return false;   // already seen, or brand-new (intro covers it)
+    showWhatsNew(); return true; }
+  if(whatsnew){ document.getElementById('wnClose').addEventListener('click', ()=>whatsnew.classList.add('hidden'));
+    whatsnew.addEventListener('click', e=>{ if(e.target===whatsnew) whatsnew.classList.add('hidden'); }); }
+
+  /* ---------------- share watermark — every share advertises Ensō ---------------- */
+  function drawWatermark(o, W, H){
+    if(state.watermark===false) return;
+    const s=clamp(Math.min(W,H)*0.028, 13, 42), txt='Made with Ensō';
+    o.save(); o.font='600 '+Math.round(s)+'px "Fredoka",system-ui,sans-serif';
+    const tw=o.measureText(txt).width, ringR=s*0.6, gap=s*0.42, padx=s*0.7;
+    const boxW=ringR*2+gap+tw+padx*2, boxH=s*1.9, mx=s*0.8;
+    const bx=W-boxW-mx, by=H-boxH-mx, cx=bx+padx+ringR, cy=by+boxH/2;
+    o.globalAlpha=0.9; o.fillStyle='rgba(18,18,22,0.34)'; roundRect(o,bx,by,boxW,boxH,boxH/2); o.fill();
+    o.globalAlpha=1; o.strokeStyle='#e0503a'; o.lineWidth=Math.max(2,s*0.17); o.lineCap='round';
+    o.beginPath(); o.arc(cx,cy,ringR,Math.PI*0.16,Math.PI*1.95); o.stroke();
+    o.fillStyle='rgba(255,255,255,0.94)'; o.textAlign='left'; o.textBaseline='middle';
+    o.fillText(txt, cx+ringR+gap, cy+s*0.04); o.restore();
   }
 
   /* ---------------- boot ---------------- */
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
   updateHud();
-  if(!maybeShowIntro()) maybeShowAppPrompt();
+  if(!maybeShowIntro()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); }
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();
