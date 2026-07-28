@@ -492,7 +492,22 @@ body.select #paper{cursor:crosshair}
 .sheet-foot button{min-height:36px}
 .mus-item,.mus-recbtn,.gal-thumb,.stile{transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
 .mus-item:active,.mus-recbtn:active,.modal-actions button:active{transform:scale(.98)}
+/* prominent share button on the main bar */
+.rail-share{background:var(--accent)}
+.rail-share svg{stroke:#fff}
+.rail-share:hover{background:var(--accent-2)}
+.rail-share:active{transform:scale(.94)}
+
+/* magic-garden drifting critters */
+.critter{position:fixed;z-index:40;pointer-events:none;font-size:20px;line-height:1;will-change:transform,opacity;
+  animation:critterFloat 2.3s ease-out forwards}
+@keyframes critterFloat{
+  0%{transform:translate(-50%,-50%) scale(.3);opacity:0}
+  16%{opacity:1}
+  100%{transform:translate(calc(-50% + var(--cx)),calc(-50% + var(--cy))) scale(1) rotate(8deg);opacity:0}}
+
 @media (prefers-reduced-motion:reduce){
-  #sheet,.modal,.sparkle,.clear-anim,#toast{animation:none!important}
+  #sheet,.modal,.sparkle,.clear-anim,#toast,.critter{animation:none!important}
+  .critter{display:none}
   *{scroll-behavior:auto!important}
 }

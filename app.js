@@ -591,7 +591,7 @@
         live._ts = live._startMs - session.t0; live._td = Math.max(80, performance.now()-live._startMs);
         if(live.tool==='garden'){
           const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
-          const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c');
+          const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c'); critterBurst(sp.x, sp.y);
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
             const shaped=recognizeShape(live);
@@ -728,38 +728,91 @@
     const a=pts[i], b=pts[i+1]; let tx=b.x-a.x, ty=b.y-a.y; const L=Math.hypot(tx,ty)||1;
     return { x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t, tx:tx/L, ty:ty/L };
   }
+  // A palette of living-garden elements. Each helper returns vector stroke items (world
+  // coords) — undoable and razor-sharp at any zoom, just like hand-drawn ink.
+  const G_FLOWER=['#ff6f9c','#ffd23f','#ff8c42','#9a5bff','#ff5d5d','#4db6ff','#ff7ab0','#f26fb2','#ffb347','#e85d75','#c77dff','#ff9ec7'];
+  const G_LEAF=['#3f9d52','#57b46a','#2f8f49','#6cbf6c','#4aa85a'];
+  const G_VINE=['#4a9d54','#3f8f49','#57a862'];
+  const gpick=a=>a[Math.floor(Math.random()*a.length)];
+  const gRnd=()=>Math.random();
+  function gI(col,w,pts,snapped){ return { tool:'brush', color:col, size:w, layer:activeLayer, snapped:!!snapped, pts }; }
+  function gDot(x,y,r,col){ return gI(col, r, [{x,y,w:r}]); }
+  function gLeaf(bx,by,dx,dy,len,col,w){ const L=Math.hypot(dx,dy)||1; dx/=L; dy/=L; const nx=-dy,ny=dx;
+    const tx=bx+dx*len, ty=by+dy*len, mx=(bx+tx)/2+nx*len*0.24, my=(by+ty)/2+ny*len*0.24;
+    return [ gI(col, w*1.4, [{x:bx,y:by,w:w*0.4},{x:mx,y:my,w:w*1.3},{x:tx,y:ty,w:w*0.16}]) ]; }
+  function gFlower(x,y,r,col,n,w){ const out=[];
+    for(let p=0;p<n;p++){ const a=p/n*Math.PI*2; out.push(gI(col, w*1.6, [{x,y,w:w*0.6},{x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,w:w*1.7},{x:x+Math.cos(a+0.5)*r*0.5,y:y+Math.sin(a+0.5)*r*0.5,w:w*0.4}])); }
+    out.push(gDot(x,y,w*2.1,'#ffd23f')); return out; }
+  function gTulip(x,y,s,col,w){ return [
+    gI(col,w*1.8,[{x:x-s*0.42,y:y,w:w*0.5},{x:x-s*0.2,y:y-s,w:w*1.6},{x:x-s*0.05,y:y-s*0.3,w:w*0.5}]),
+    gI(col,w*1.8,[{x,y:y+s*0.1,w:w*0.5},{x,y:y-s*1.15,w:w*1.6},{x,y:y-s*0.3,w:w*0.5}]),
+    gI(col,w*1.8,[{x:x+s*0.42,y:y,w:w*0.5},{x:x+s*0.2,y:y-s,w:w*1.6},{x:x+s*0.05,y:y-s*0.3,w:w*0.5}]) ]; }
+  function gBlossom(x,y,r,col){ const out=[]; for(let p=0;p<5;p++){ const a=p/5*Math.PI*2; out.push(gDot(x+Math.cos(a)*r*0.7, y+Math.sin(a)*r*0.7, r, col)); } out.push(gDot(x,y,r*0.8,'#fff3b0')); return out; }
+  function gGrass(x,y,size){ const out=[], n=3+Math.floor(gRnd()*3), col=gpick(G_VINE);
+    for(let i=0;i<n;i++){ const off=(i-(n-1)/2)*size*0.22, sway=(gRnd()-0.5)*size*0.45;
+      out.push(gI(col, size*0.14, [{x:x+off,y:y,w:size*0.18},{x:x+off+sway,y:y-size,w:size*0.02}])); } return out; }
+  function gFern(x,y,dx,dy,len,w){ const L=Math.hypot(dx,dy)||1; dx/=L; dy/=L; const nx=-dy,ny=dx, col=gpick(G_LEAF), out=[];
+    out.push(gI(col,w, [{x,y,w:w*0.5},{x:x+dx*len,y:y+dy*len,w:w*0.12}]));
+    for(let i=1;i<=4;i++){ const f=i/5, px=x+dx*len*f, py=y+dy*len*f, ll=len*0.3*(1-f*0.5);
+      for(const s of [1,-1]) out.push(gI(col,w*0.8,[{x:px,y:py,w:w*0.4},{x:px+(nx*s*0.8+dx*0.4)*ll,y:py+(ny*s*0.8+dy*0.4)*ll,w:w*0.08}])); } return out; }
+  function gVineCurl(x,y,size,dir,col,w){ const pts=[];
+    for(let i=0;i<=18;i++){ const t=i/18, a=t*Math.PI*3.2*dir, r=size*0.5*t; pts.push({x:x+Math.cos(a)*r, y:y-size*t+Math.sin(a)*r, w:w*(1-t*0.6)}); }
+    return [ gI(col,w,pts) ]; }
+  function gMushroom(x,y,size){ const cap=gpick(['#e0503a','#d94f4f','#ff8c42','#c77dff']);
+    return [ gI('#f2ead6', size*0.5, [{x,y,w:size*0.5},{x,y:y-size,w:size*0.5}]),
+      gI(cap, size*0.7, [{x:x-size*0.9,y:y-size,w:size*0.25},{x,y:y-size-size*0.5,w:size*1.5},{x:x+size*0.9,y:y-size,w:size*0.25}], true),
+      gDot(x-size*0.35,y-size-size*0.28,size*0.18,'#fff'), gDot(x+size*0.28,y-size-size*0.36,size*0.15,'#fff') ]; }
+  function gRock(x,y,size){ const col=gpick(['#9a958c','#847f76','#a8a29a']);
+    return [ gI(col, size, [{x:x-size*0.55,y:y,w:size*0.6},{x,y:y-size*0.42,w:size*1.15},{x:x+size*0.55,y:y,w:size*0.6}], true) ]; }
+  function gTree(x,y,w){ const out=[], trunk='#8d5a3c', h=w*10, top={x, y:y-h}, canopy=gpick(['#57b46a','#7ec87e','#9ad49a','#6cbf6c']);
+    out.push(gI(trunk, w*1.6, [{x,y,w:w*1.9},{x:x+(gRnd()-0.5)*h*0.1,y:y-h,w:w*0.7}]));
+    for(const s of [1,-1]) out.push(gI(trunk,w*1.1,[{x,y:y-h*0.5,w:w*0.9},{x:x+s*h*0.32,y:y-h*0.68,w:w*0.25}]));
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2, r=h*0.28; out.push(gDot(top.x+Math.cos(a)*r, top.y+Math.sin(a)*r*0.8, w*4, canopy)); }
+    out.push(gDot(top.x,top.y,w*5,canopy));
+    for(let i=0;i<3;i++) out.push(gDot(top.x+(gRnd()-0.5)*h*0.4, top.y+(gRnd()-0.5)*h*0.3, w*1.5, gpick(G_FLOWER)));
+    return out; }
+
+  // Every garden stroke grows a different living scene — leaves, vines, ferns, grass,
+  // blossoms, mushrooms, rocks and a flower or tree, sprinkled at random along the stem.
   function growGarden(stem){
     const pts=stem.pts, items=[stem];
     if(pts.length<2) return items;
     let total=0; for(let i=1;i<pts.length;i++) total+=Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
     const w=stem.size||6/cam.scale;
-    if(total < w*5) return items;                       // too short — just a sprout, no leaves
-    const leafLen=Math.max(w*7, total*0.16);
-    const nLeaves=clamp(Math.floor(total/(w*11)), 2, 8);
-    const leafCols=['#3f9d52','#57b46a','#2f8f49'];
-    for(let k=1;k<=nLeaves;k++){
-      const f=k/(nLeaves+1), P=samplePath(pts,f), side=(k%2?1:-1);
-      const nx=-P.ty*side, ny=P.tx*side;                // outward normal, alternating sides
-      const bx=P.x, by=P.y;
-      const tx=bx+(nx*0.85+P.tx*0.45)*leafLen, ty=by+(ny*0.85+P.ty*0.45)*leafLen;
-      const mx=(bx+tx)/2+nx*leafLen*0.22, my=(by+ty)/2+ny*leafLen*0.22;
-      const lw=w*1.5;
-      const leaf={ tool:'brush', color:leafCols[k%leafCols.length], size:lw, layer:stem.layer, snapped:false,
-        pts:[{x:bx,y:by,w:lw*0.45},{x:mx,y:my,w:lw},{x:tx,y:ty,w:lw*0.2}] };
-      finalizeBB(leaf); items.push(leaf);
+    stem.color=gpick(G_VINE);
+    const tip=pts[pts.length-1], base=pts[0];
+    if(total < w*4){ items.push(...gGrass(tip.x,tip.y,w*4)); if(gRnd()<0.5) items.push(...gBlossom(tip.x,tip.y-w*3,w*1.4,gpick(G_FLOWER))); return items; }
+    const el=Math.max(w*6, total*0.14);
+    const n=clamp(Math.floor(total/(w*8)), 2, 11);
+    for(let k=1;k<=n;k++){
+      const f=k/(n+1), P=samplePath(pts,f), side=(k%2?1:-1);
+      const nx=-P.ty*side, ny=P.tx*side, roll=gRnd();
+      if(roll<0.44) items.push(...gLeaf(P.x,P.y, nx*0.85+P.tx*0.4, ny*0.85+P.ty*0.4, el, gpick(G_LEAF), w*1.4));
+      else if(roll<0.60) items.push(...gGrass(P.x,P.y,el*0.9));
+      else if(roll<0.72) items.push(...gVineCurl(P.x,P.y,el*0.8,side,gpick(G_VINE),w));
+      else if(roll<0.84) items.push(...gBlossom(P.x+nx*el*0.5, P.y+ny*el*0.5, w*2.4, gpick(G_FLOWER)));
+      else items.push(...gFern(P.x,P.y, nx*0.8+P.tx*0.3, ny*0.8+P.ty*0.3, el, w));
     }
-    // flower at the tip
-    const tip=pts[pts.length-1];
-    const petalCol=['#ff6f9c','#ffd23f','#ff8c42','#9a5bff','#ff5d5d','#4db6ff','#ff7ab0'][Math.floor(Math.random()*7)];
-    const R=Math.max(w*3.2, leafLen*0.55), petals=5+Math.floor(Math.random()*3);
-    for(let p=0;p<petals;p++){ const a=p/petals*Math.PI*2;
-      const petal={ tool:'brush', color:petalCol, size:w*1.7, layer:stem.layer, snapped:false,
-        pts:[{x:tip.x,y:tip.y,w:w*0.6},{x:tip.x+Math.cos(a)*R,y:tip.y+Math.sin(a)*R,w:w*1.7},{x:tip.x+Math.cos(a+0.55)*R*0.5,y:tip.y+Math.sin(a+0.55)*R*0.5,w:w*0.5}] };
-      finalizeBB(petal); items.push(petal);
-    }
-    const center={ tool:'brush', color:'#ffd23f', size:w*2.2, layer:stem.layer, snapped:false, pts:[{x:tip.x,y:tip.y,w:w*2.2}] };
-    finalizeBB(center); items.push(center);
+    items.push(...gGrass(base.x,base.y,el));
+    if(gRnd()<0.45) items.push(...gMushroom(base.x+(gRnd()-0.5)*el, base.y, w*2.4));
+    if(gRnd()<0.4)  items.push(...gRock(base.x-(gRnd()-0.5)*el, base.y, w*2.2));
+    const feat=gRnd();
+    if(total > w*20 && feat<0.32) items.push(...gTree(tip.x,tip.y,w));
+    else if(feat<0.68) items.push(...gFlower(tip.x,tip.y, Math.max(w*3.2,el*0.55), gpick(G_FLOWER), 5+Math.floor(gRnd()*4), w));
+    else items.push(...gTulip(tip.x,tip.y, el*0.9, gpick(G_FLOWER), w));
     return items;
+  }
+  // gentle drifting critters (butterfly/bee/bird/petal) rise from a finished plant
+  function critterBurst(sx, sy){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const kinds=['🦋','🐝','🐞','🐦','✨','🌸','🍃'], n=1+Math.floor(Math.random()*2);
+    for(let i=0;i<n;i++){ const el=document.createElement('span'); el.className='critter'; el.textContent=kinds[Math.floor(Math.random()*kinds.length)];
+      el.style.left=sx+'px'; el.style.top=sy+'px';
+      const ang=-Math.PI/2+(Math.random()-0.5)*1.3, dist=55+Math.random()*80;
+      el.style.setProperty('--cx',(Math.cos(ang)*dist).toFixed(0)+'px');
+      el.style.setProperty('--cy',(Math.sin(ang)*dist-24).toFixed(0)+'px');
+      el.style.animationDelay=(i*0.12)+'s';
+      document.body.appendChild(el); setTimeout(()=>el.remove(), 2400); }
   }
 
   /* ---------------- symmetry (mandala) ---------------- */
@@ -1242,6 +1295,7 @@
   sizeRange.addEventListener('input',()=>{ state.size=+sizeRange.value; });
   document.getElementById('undo').addEventListener('click', ()=>{ undo(); buzz(6); });
   document.getElementById('redo').addEventListener('click', ()=>{ redo(); buzz(6); });
+  { const sb=document.getElementById('shareBtn'); if(sb) sb.addEventListener('click', ()=>{ shareImage(); buzz(8); }); }
 
   const symBtn=document.getElementById('symBtn');
   symBtn.addEventListener('click',()=>{ state.sym=!state.sym; symBtn.classList.toggle('on',state.sym); symBtn.setAttribute('aria-pressed',state.sym?'true':'false');
@@ -1889,8 +1943,8 @@
   function animateGarden(items){
     if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const decos=items.slice(1); if(!decos.length) return;
-    const now=performance.now();
-    decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*70, dur:300, ax:a.x, ay:a.y }; });
+    const now=performance.now(), stag=Math.min(70, 1000/Math.max(1,decos.length));
+    decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*stag, dur:300, ax:a.x, ay:a.y }; });
     cancelAnimationFrame(gardenRAF);
     const step=()=>{ const t=performance.now(); let any=false;
       for(const it of decos){ if(it._grow){ if(t < it._grow.t0+it._grow.dur) any=true; else delete it._grow; } }
