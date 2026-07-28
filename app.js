@@ -1256,6 +1256,7 @@
     else if(a==='breathe') startBreathe();
     else if(a==='sing') startSing();
     else if(a==='spiro') openSpiro();
+    else if(a==='privacy') window.open('privacy.html','_blank','noopener');
     else if(a==='donate') openDonate();
     else if(a==='clear') clearAll();
   }));
