@@ -2013,7 +2013,7 @@
 
   /* ---------------- first-visit intro ---------------- */
   let introTimer=0;
-  const INTRO_KEY='enso.intro2';   // bumped so the (fixed) intro shows once for everyone
+  const INTRO_KEY='enso.intro3';   // bumped so the new capability-reel intro shows once for everyone
   function playIntro(el){
     clearTimeout(introTimer);
     el.classList.add('hidden'); void el.offsetWidth; el.classList.remove('hidden');   // restart every child animation from 0
@@ -2564,8 +2564,9 @@
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
   updateHud(); buildAmbient();
-  // Simple onboarding: first-timers get a short guided tour (the long intro is optional, via Menu → Watch intro)
-  if(!maybeTour()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); }
+  // Onboarding: first run plays the capability-reel intro (what Ensō can do); the guided tour
+  // stays available via Menu → Tour. Returning users fall through to what's-new / install prompt.
+  if(!maybeShowIntro()){ if(!maybeTour()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); } }
   addEventListener('resize', resize);
   if(window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();

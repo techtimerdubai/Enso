@@ -369,31 +369,25 @@
   <div id="toast" class="hidden" role="status" aria-live="polite"></div>
   <div id="hint" aria-hidden="true">Draw anywhere · pinch or scroll to zoom · <span class="kb-only">hold <kbd>Space</kbd> or </span>drag two fingers to pan</div>
 
-  <!-- First-visit intro — "one stroke to infinity" -->
-  <div id="intro" class="hidden" role="dialog" aria-label="Welcome to Ensō — one stroke to infinity">
+  <!-- First-visit intro — capability reel (what Ensō can do) -->
+  <div id="intro" class="hidden" role="dialog" aria-label="What Ensō can do">
     <div class="intro-stage" aria-hidden="true">
-      <div class="isc iz z1"><svg viewBox="0 0 200 200"><path class="verm" pathLength="100" d="M140 64 a46 46 0 1 1 -13 -10"/><circle class="dot-d" cx="100" cy="104" r="4"/></svg></div>
-      <div class="isc iz z2"><svg viewBox="0 0 200 200"><path class="ink" d="M100 172 L100 108"/><path class="green" d="M100 108 q-34 -6 -22 -34 q22 14 22 34 q0 -20 22 -34 q12 28 -22 34z"/><circle class="dot-v" cx="100" cy="92" r="4"/></svg></div>
-      <div class="isc iz z3"><svg viewBox="0 0 200 200"><circle class="ink o" cx="100" cy="100" r="46"/><circle class="dot-d" cx="84" cy="90" r="5"/><circle class="dot-d" cx="116" cy="90" r="5"/><path class="ink" d="M80 118 q20 20 40 0"/></svg></div>
-      <div class="isc iz z4"><svg viewBox="0 0 200 200"><path class="purp" d="M100 100 q30 -4 30 26 q0 34 -44 34 q-48 0 -48 -50 q0 -56 60 -56 q66 0 66 66"/><circle class="dot-y" cx="100" cy="100" r="6"/></svg></div>
-      <div class="isc gal"><div class="gwrap">
-        <svg viewBox="0 0 40 40"><path class="g-verm" d="M9 32 C13 20 21 17 27 10"/><path class="g-verm" d="M27 10 l4 -2 -1 4"/></svg>
-        <svg viewBox="0 0 40 40"><path class="g-ink" d="M20 34 L20 22"/><path class="g-green" d="M20 22 q-9 -2 -6 -10 q6 4 6 10 q0 -6 6 -10 q3 8 -6 10z"/></svg>
-        <svg viewBox="0 0 40 40"><path class="g-blue" d="M20 6 q7 6 7 16 l-3 6 h-8 l-3 -6 q0 -10 7 -16z"/><path class="g-blue" d="M13 28 l-4 6 M27 28 l4 6"/></svg>
-        <svg viewBox="0 0 40 40"><path class="g-pink" d="M20 26 q-8 -8 0 -14 q8 6 0 14 M20 26 q8 -8 0 -14"/><path class="g-ink" d="M20 26 L20 34"/></svg>
-        <svg viewBox="0 0 40 40"><circle class="g-yellow o2" cx="20" cy="19" r="12"/><circle class="g-dot" cx="16" cy="17" r="1.6"/><circle class="g-dot" cx="24" cy="17" r="1.6"/><path class="g-ink" d="M15 23 q5 5 10 0"/></svg>
-        <svg viewBox="0 0 40 40"><path class="g-purp" d="M9 26 l4 -8 8 -3 -3 8 8 4 -8 3 3 8 -8 -4z"/></svg>
-      </div></div>
+      <div class="dbrand">Ensō 円相</div>
+      <div class="dsc d1"><svg viewBox="0 0 120 90"><path d="M12 60 C 30 20 60 78 78 34 S 108 26 112 40" fill="none" stroke="#e0503a" stroke-width="9" stroke-linecap="round"/></svg></div>
+      <div class="dsc d2"><svg viewBox="0 0 120 110"><path d="M60 100 V56" stroke="#3f9d52" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M60 74 q-20 -6 -14 -24 q18 8 14 24z" fill="#57b46a"/><path d="M60 66 q20 -7 14 -26 q-18 9 -14 26z" fill="#57b46a"/><circle cx="60" cy="28" r="7" fill="#ff6f9c"/><circle cx="72" cy="40" r="7" fill="#ff6f9c"/><circle cx="60" cy="52" r="7" fill="#ff6f9c"/><circle cx="48" cy="40" r="7" fill="#ff6f9c"/><circle cx="60" cy="40" r="8" fill="#ffd23f"/></svg></div>
+      <div class="dsc d3"><svg viewBox="0 0 140 116"><circle cx="30" cy="60" r="11" fill="#e0503a" opacity=".25"/><circle cx="70" cy="30" r="11" fill="#e0503a" opacity=".55"/><circle cx="110" cy="60" r="11" fill="#e0503a"/><path d="M62 88 l16 9 -16 9z" fill="#26262e"/></svg></div>
+      <div class="dsc d4"><svg viewBox="0 0 150 88"><path d="M20 74 a55 40 0 0 1 110 0" fill="none" stroke="#ff5d5d" stroke-width="6"/><path d="M28 74 a47 34 0 0 1 94 0" fill="none" stroke="#ff8c42" stroke-width="6"/><path d="M36 74 a39 28 0 0 1 78 0" fill="none" stroke="#ffd23f" stroke-width="6"/><path d="M44 74 a31 22 0 0 1 62 0" fill="none" stroke="#57b46a" stroke-width="6"/><path d="M52 74 a23 16 0 0 1 46 0" fill="none" stroke="#4db6ff" stroke-width="6"/><path d="M60 74 a15 11 0 0 1 30 0" fill="none" stroke="#9a5bff" stroke-width="6"/></svg></div>
+      <div class="dsc d5"><svg viewBox="0 0 100 100"><path d="M28 62 v22a6 6 0 006 6h32a6 6 0 006 -6V62M50 66V22M38 40l12 -14 12 14" fill="none" stroke="#e0503a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="dlab l1">Draw anything ✍️</div>
+      <div class="dlab l2">Grow magic worlds 🌱</div>
+      <div class="dlab l3">Make it move 🎬</div>
+      <div class="dlab l4">A world of colours 🌈</div>
+      <div class="dlab l5">Share your art 💛</div>
       <div class="isc fin">
         <span class="fin-ring"></span>
-        <div class="ftitle">The canvas is infinite.</div>
+        <div class="ftitle">That's Ensō.</div>
         <div class="fsub">What will you create?</div>
       </div>
-      <div class="cap k1">It starts with one stroke.</div>
-      <div class="cap k2">Zoom in…</div>
-      <div class="cap k3">…and a world appears.</div>
-      <div class="cap k4">Every detail hides another.</div>
-      <div class="cap k5">One canvas — endless creation.</div>
     </div>
     <button id="introSkip" class="intro-skip">Skip</button>
   </div>

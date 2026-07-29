@@ -381,44 +381,38 @@ body.select #paper{cursor:crosshair}
   .swatch{width:26px;height:26px}
 }
 
-/* ---- first-visit intro ("one stroke to infinity") ---- */
+/* ---- first-visit intro: capability reel (what Ensō can do) ---- */
 #intro{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;cursor:pointer;
-  opacity:1;transition:opacity .55s ease;background:#f4f1ea;
-  background-image:radial-gradient(#d6d1c2 1.3px,transparent 1.3px);background-size:16px 16px}
+  opacity:1;transition:opacity .55s ease;background:#f5f2ea;
+  background-image:radial-gradient(#dcd6c7 1.1px,transparent 1.1px);background-size:15px 15px}
 #intro.closing{opacity:0;pointer-events:none}
 .intro-stage{position:absolute;inset:0}
-#intro .isc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform-box:view-box;transform-origin:50% 46%;will-change:transform,opacity}
-#intro .isc svg{width:min(56vmin,300px);height:min(56vmin,300px)}
-#intro .isc path,#intro .isc circle.o{fill:none;stroke-width:4.4;stroke-linecap:round;stroke-linejoin:round}
-#intro .verm{stroke:#e0503a}#intro .ink{stroke:#26262e}#intro .green{stroke:#2a8f52}#intro .purp{stroke:#9a5bff}
-#intro .dot-d{fill:#26262e;stroke:none}#intro .dot-v{fill:#e0503a;stroke:none}#intro .dot-y{fill:#f2b705;stroke:none}
-#intro .iz{animation:i_zoom 3.6s cubic-bezier(.55,.06,.5,.95) both}
-#intro .z2{animation-delay:2.4s}#intro .z3{animation-delay:4.8s}#intro .z4{animation-delay:7.2s}
-@keyframes i_zoom{0%{opacity:0;transform:scale(.08)}14%{opacity:1}50%{transform:scale(1)}64%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(5)}}
-#intro .gal{animation:i_gal 3.6s ease-out both;animation-delay:9.4s}
-#intro .gwrap{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 26px;width:min(66vmin,300px)}
-#intro .gwrap svg{width:100%;height:auto;aspect-ratio:1}
-#intro .gwrap svg path,#intro .gwrap svg circle{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-#intro .g-verm{stroke:#e0503a}#intro .g-ink{stroke:#26262e}#intro .g-green{stroke:#2a8f52}#intro .g-blue{stroke:#2b8ce0}#intro .g-pink{stroke:#ff5fa2}#intro .g-yellow{stroke:#e0a70a}#intro .g-purp{stroke:#9a5bff}#intro .g-dot{fill:#26262e;stroke:none}
-@keyframes i_gal{0%{opacity:0;transform:scale(1.6)}22%{opacity:1;transform:scale(1)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.92)}}
-#intro .fin{flex-direction:column;gap:10px;text-align:center;animation:i_fin 4.2s ease-in-out both;animation-delay:12.6s}
+#intro .dbrand{position:absolute;top:calc(18px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;
+  font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:15px;color:#26262e;letter-spacing:.3px}
+#intro .dsc{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);opacity:0;
+  will-change:transform,opacity;animation:d_scene 2s ease-in-out both}
+#intro .dsc svg{display:block;width:min(52vmin,230px);height:auto}
+#intro .d1{animation-delay:.3s}#intro .d2{animation-delay:2.3s}#intro .d3{animation-delay:4.3s}#intro .d4{animation-delay:6.3s}#intro .d5{animation-delay:8.3s}
+@keyframes d_scene{0%{opacity:0;transform:translate(-50%,-50%) scale(.82)}17%{opacity:1;transform:translate(-50%,-50%) scale(1)}72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.06)}}
+#intro .dlab{position:absolute;left:0;right:0;bottom:15%;text-align:center;padding:0 22px;
+  font-family:'Fredoka',system-ui,sans-serif;font-weight:500;font-size:19px;color:#26262e;
+  opacity:0;animation:d_lab 2s ease-in-out both}
+#intro .l1{animation-delay:.3s}#intro .l2{animation-delay:2.3s}#intro .l3{animation-delay:4.3s}#intro .l4{animation-delay:6.3s}#intro .l5{animation-delay:8.3s}
+@keyframes d_lab{0%{opacity:0;transform:translateY(10px)}18%{opacity:1;transform:none}72%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px)}}
+#intro .isc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#intro .fin{flex-direction:column;gap:10px;text-align:center;opacity:0;animation:i_fin 3.4s ease-in-out both;animation-delay:10.3s}
 #intro .fin-ring{width:52px;height:52px;border:5px solid #e0503a;border-right-color:transparent;border-radius:50%;transform:rotate(35deg);margin-bottom:6px}
 #intro .ftitle{font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:25px;color:#26262e;letter-spacing:.3px}
 #intro .fsub{font-family:'Fredoka',system-ui,sans-serif;font-weight:500;font-size:17px;color:#e0503a}
 @keyframes i_fin{0%{opacity:0;transform:scale(.94)}24%{opacity:1;transform:scale(1)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
-#intro .cap{position:absolute;left:0;right:0;bottom:13%;text-align:center;padding:0 22px;
-  font-family:'Fredoka',system-ui,sans-serif;font-weight:500;font-size:18px;color:#3a3a42;
-  opacity:0;animation:i_cap 2.6s ease-in-out both}
-#intro .k2{animation-delay:2.4s}#intro .k3{animation-delay:4.8s}#intro .k4{animation-delay:7.2s}#intro .k5{animation-delay:9.4s}
-@keyframes i_cap{0%{opacity:0;transform:translateY(8px)}16%{opacity:1;transform:none}70%{opacity:1}100%{opacity:0}}
 #intro .intro-skip{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:16px;z-index:2;
   background:rgba(38,38,46,.06);border:1px solid rgba(38,38,46,.16);color:#6f665a;border-radius:20px;
   padding:7px 16px;font-size:13px;cursor:pointer;font-family:'Fredoka',system-ui,sans-serif;font-weight:500}
 #intro .intro-skip:hover{background:rgba(38,38,46,.12);color:#26262e}
 @media (prefers-reduced-motion:reduce){
-  #intro .isc,#intro .cap,#intro .fin-ring{animation:none!important}
-  #intro .iz,#intro .gal,#intro .cap{opacity:0}
-  #intro .fin{opacity:1!important;transform:none!important}
+  #intro .dsc,#intro .dlab{animation:none!important;opacity:0!important}
+  #intro .fin{animation:none!important;opacity:1!important;transform:none!important}
+  #intro .fin-ring{animation:none!important}
 }
 
 /* ---- wow pack: app-colour picker, glow room, spirograph, one-breath, sing ---- */
