@@ -2269,7 +2269,7 @@
   const APP_VER='wow-7';
   const WN_ITEMS=[
     '✨ Living canvas — your art gently comes alive',
-    '🔊 Gentle sounds (turn off in Accessibility)',
+    '🔊 Optional gentle sounds (turn on in Accessibility)',
     '🎬 Animate flipbooks & ⛅ paint the Weather',
     '🌌 Galaxy & 🌊 Ocean world brushes',
     '🏆 Badges, saved pens & 90+ stickers',
@@ -2374,7 +2374,7 @@
 
   /* ---------------- Sound design — tiny procedural SFX (offline, no files) ---------------- */
   const SOUND_KEY='enso.sound';
-  let soundOn=(()=>{ try{ return localStorage.getItem(SOUND_KEY)!=='0'; }catch(e){ return true; } })();
+  let soundOn=(()=>{ try{ return localStorage.getItem(SOUND_KEY)==='1'; }catch(e){ return false; } })();   // off by default; opt in via Accessibility
   let sfxCtx=null, sfxMaster=null, sfxLast=0;
   function sfxInit(){ if(sfxCtx) return sfxCtx;
     try{ sfxCtx=new (window.AudioContext||window.webkitAudioContext)(); sfxMaster=sfxCtx.createGain(); sfxMaster.gain.value=0.3; sfxMaster.connect(sfxCtx.destination); }catch(e){ sfxCtx=null; }
