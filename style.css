@@ -394,6 +394,9 @@ body.select #paper{cursor:crosshair}
 #intro .dsc svg{display:block;width:min(52vmin,230px);height:auto}
 #intro .d1{animation-delay:.3s}#intro .d2{animation-delay:2.3s}#intro .d3{animation-delay:4.3s}#intro .d4{animation-delay:6.3s}#intro .d5{animation-delay:8.3s}
 @keyframes d_scene{0%{opacity:0;transform:translate(-50%,-50%) scale(.82)}17%{opacity:1;transform:translate(-50%,-50%) scale(1)}72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.06)}}
+#intro .dk{stroke-dasharray:200;stroke-dashoffset:200;animation:d_stroke 1.1s ease-out forwards}
+#intro .dk1{animation-delay:6.5s}#intro .dk2{animation-delay:6.62s}#intro .dk3{animation-delay:6.74s}#intro .dk4{animation-delay:6.86s}#intro .dk5{animation-delay:6.98s}
+@keyframes d_stroke{to{stroke-dashoffset:0}}
 #intro .dlab{position:absolute;left:0;right:0;bottom:15%;text-align:center;padding:0 22px;
   font-family:'Fredoka',system-ui,sans-serif;font-weight:500;font-size:19px;color:#26262e;
   opacity:0;animation:d_lab 2s ease-in-out both}
@@ -411,6 +414,7 @@ body.select #paper{cursor:crosshair}
 #intro .intro-skip:hover{background:rgba(38,38,46,.12);color:#26262e}
 @media (prefers-reduced-motion:reduce){
   #intro .dsc,#intro .dlab{animation:none!important;opacity:0!important}
+  #intro .dk{animation:none!important;stroke-dashoffset:0!important}
   #intro .fin{animation:none!important;opacity:1!important;transform:none!important}
   #intro .fin-ring{animation:none!important}
 }
