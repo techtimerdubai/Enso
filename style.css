@@ -520,9 +520,17 @@ body.select #paper{cursor:crosshair}
 body.hc{--muted:#d9d9e0;--brd:rgba(255,255,255,.34)}
 body.hc .glass{background:rgba(16,16,20,.95)}
 body.hc .stile .ti,body.hc .mus-item,body.hc .gal-card,body.hc .accdot{border:1px solid var(--brd)}
-body.bigtext .stile,body.bigtext .sheet-h{font-size:13px}
-body.bigtext .modal-card p,body.bigtext .muted,body.bigtext .a11y-row,body.bigtext .mus-item{font-size:15.5px}
-body.bigtext #toast,body.bigtext #tourTip p,body.bigtext .cr-name{font-size:16px}
+/* larger text — rem-based: the class is set on <html> so 1rem scales the whole UI */
+html.bigtext{font-size:118%}
+html.bigtext .sheet-h,html.bigtext .cr-role,html.bigtext .bg-name{font-size:.73rem}
+html.bigtext .stile,html.bigtext .gal-name,html.bigtext .palchip,html.bigtext .accdot+.accdot{font-size:.78rem}
+html.bigtext .sheet-foot button,html.bigtext #hud,html.bigtext .pr-lbl{font-size:.82rem}
+html.bigtext .mus-item,html.bigtext .mus-recbtn,html.bigtext .mus-hint,html.bigtext .brush-grid .brush,html.bigtext #singBar,html.bigtext #musicChip,html.bigtext #flipBar button{font-size:.86rem}
+html.bigtext .modal-card p,html.bigtext .muted,html.bigtext .modal-actions button,html.bigtext #tourTip p,html.bigtext #hint,html.bigtext .cr-note,html.bigtext .sheet-foot,html.bigtext #appPrompt{font-size:.9rem}
+html.bigtext .a11y-row,html.bigtext #toast,html.bigtext #tourTip .tt-actions button{font-size:.96rem}
+html.bigtext .cr-name,html.bigtext .brand .name{font-size:1.12rem}
+html.bigtext #tourTip h4{font-size:1.18rem}
+html.bigtext .modal-card h3{font-size:1.26rem}
 body.reduce-motion *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 body.reduce-motion .critter{display:none}
 
@@ -552,6 +560,13 @@ body.reduce-motion .critter{display:none}
 #flipBar #flipPlay{background:var(--accent);border-color:transparent;color:#fff;font-weight:600;padding:0 12px}
 #flipBar .flip-info{font-size:13px;color:var(--muted);min-width:36px;text-align:center}
 #flipBar .flip-sep{width:1px;height:20px;background:var(--brd);margin:0 3px}
+
+/* ---- zoom-level pill ---- */
+#hud{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:6;
+  background:var(--glass);border:1px solid var(--brd);color:var(--fg);border-radius:20px;padding:6px 12px;
+  font-size:12.5px;font-variant-numeric:tabular-nums;cursor:pointer;box-shadow:var(--shadow);min-width:46px;min-height:32px;text-align:center}
+#hud:hover{background:var(--glass-2)}
+body.zen #hud,body.flip #hud{opacity:0;pointer-events:none}
 
 /* ---- QA: consistency, focus, motion ---- */
 :where(button,[role=menuitem],input,a,label,.swatch,.favdot):focus-visible{outline:2px solid var(--focus);outline-offset:2px}

@@ -1882,7 +1882,13 @@
   function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
   function stamp(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
   const hud=document.getElementById('hud');
-  function updateHud(){ if(hud) hud.textContent = cam.scale>=1 ? Math.round(cam.scale*100)+'%' : (cam.scale*100).toFixed(cam.scale<0.1?1:0)+'%'; }
+  function updateHud(){ if(!hud) return; const p=cam.scale*100; let t;
+    if(p>=1e6) t=(p/1e6).toFixed(p>=1e7?0:1)+'M%';
+    else if(p>=1e5) t=Math.round(p/1000)+'k%';
+    else if(p>=100) t=Math.round(p).toLocaleString()+'%';
+    else if(p>=10) t=Math.round(p)+'%';
+    else t=p.toFixed(1)+'%';
+    hud.textContent=t; }
   let toastT; function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); t.style.opacity='1';
     clearTimeout(toastT); toastT=setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.classList.add('hidden'),300); }, 1900); }
   // toast with an action button (e.g. a "clear → Undo" snackbar)
@@ -2367,7 +2373,7 @@
   /* ---------------- Accessibility settings ---------------- */
   const a11yModal=document.getElementById('a11yModal');
   const A11Y_KEY='enso.a11y', a11y={ contrast:false, big:false, motion:false };
-  function applyA11y(){ document.body.classList.toggle('hc', a11y.contrast); document.body.classList.toggle('bigtext', a11y.big); document.body.classList.toggle('reduce-motion', a11y.motion); }
+  function applyA11y(){ document.body.classList.toggle('hc', a11y.contrast); document.documentElement.classList.toggle('bigtext', a11y.big); document.body.classList.toggle('reduce-motion', a11y.motion); }
   function saveA11y(){ try{ localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); }catch(e){} }
   function openA11y(){ if(!a11yModal) return;
     document.getElementById('a11yContrast').checked=a11y.contrast; document.getElementById('a11yBig').checked=a11y.big; document.getElementById('a11yMotion').checked=a11y.motion;
