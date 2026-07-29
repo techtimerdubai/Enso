@@ -1506,6 +1506,7 @@
     else if(a==='install') doInstall();
     else if(a==='layers') openLayers();
     else if(a==='glow') toggleGlow();
+    else if(a==='living') toggleLiving();
     else if(a==='garden'){ selectTool('garden'); toast('🌱 Draw a stem — watch it grow!'); }
     else if(a==='sing') startSing();
     else if(a==='gallery') openGallery();
@@ -2264,14 +2265,14 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-5';
+  const APP_VER='wow-6';
   const WN_ITEMS=[
-    '🎬 Animate — turn your drawings into little movies',
-    '⛅ New Weather brush — clouds, rain, rainbows',
+    '✨ Living canvas — your art now gently comes alive',
+    '🎬 Animate flipbooks & ⛅ paint the Weather',
     '🌌 Galaxy & 🌊 Ocean world brushes',
-    '🌱 A livelier Magic Garden with fireflies',
     '🏆 Badges & 🖊️ saved pens',
-    '✨ 90+ stickers to collect',
+    '🔍 Zoom indicator + a bigger-text option',
+    '🎨 A tidier, clearer menu',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
     if(list){ list.innerHTML=''; for(const t of WN_ITEMS){ const li=document.createElement('li'); li.textContent=t; list.appendChild(li); } }
@@ -2434,6 +2435,38 @@
     o.fillText(txt, cx+ringR+gap, cy+s*0.04); o.restore();
   }
 
+  /* ---------------- Living canvas — gentle ambient fireflies ----------------
+     A screen-only layer of slow-drifting glowing motes so any drawing feels alive.
+     CSS-animated (GPU-composited, no main-thread cost); never captured in exports. */
+  const ambientEl=document.getElementById('ambient');
+  const LIVING_KEY='enso.living';
+  let living=(()=>{ try{ return localStorage.getItem(LIVING_KEY)!=='0'; }catch(e){ return true; } })();
+  const AMB_COLS=['255,220,120','255,236,175','185,212,255','226,190,255','255,192,220'];
+  function buildAmbient(){
+    if(!ambientEl) return; ambientEl.innerHTML='';
+    document.body.classList.toggle('no-ambient', !living);
+    if(!living || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for(let i=0;i<12;i++){
+      const el=document.createElement('span'); el.className='amote';
+      const big=Math.random()<0.35, sz=big?(5+Math.random()*4):(2+Math.random()*2), col=AMB_COLS[Math.floor(Math.random()*AMB_COLS.length)];
+      el.style.left=(Math.random()*100)+'%'; el.style.top=(Math.random()*100)+'%';
+      el.style.width=sz+'px'; el.style.height=sz+'px';
+      el.style.background='radial-gradient(circle, rgba('+col+',1) 0%, rgba('+col+',.6) 45%, rgba('+col+',0) 72%)';
+      el.style.boxShadow='0 0 '+(sz*1.7).toFixed(0)+'px rgba('+col+',.7)';
+      el.style.setProperty('--ax',(30+Math.random()*90).toFixed(0)+'px');
+      el.style.setProperty('--ay',(25+Math.random()*80).toFixed(0)+'px');
+      el.style.setProperty('--d',(22+Math.random()*22).toFixed(0)+'s');
+      el.style.setProperty('--t',(3.5+Math.random()*4).toFixed(1)+'s');
+      el.style.setProperty('--dl',(-Math.random()*20).toFixed(1)+'s');
+      el.style.setProperty('--dl2',(-Math.random()*5).toFixed(1)+'s');
+      el.style.setProperty('--omin',(0.05+Math.random()*0.1).toFixed(2));
+      el.style.setProperty('--omax',(big?0.85:0.5).toFixed(2));
+      ambientEl.appendChild(el);
+    }
+  }
+  function toggleLiving(){ living=!living; try{ localStorage.setItem(LIVING_KEY, living?'1':'0'); }catch(e){}
+    buildAmbient(); toast(living?'✨ Living canvas on':'Living canvas off'); buzz(6); }
+
   /* ---------------- Flipbook — frame-by-frame animation ----------------
      Each frame is its own set of strokes (drawn with any brush). Onion-skin shows the
      previous frame faintly; Play cycles the frames; Export records a looping video. */
@@ -2496,7 +2529,7 @@
   /* ---------------- boot ---------------- */
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
-  updateHud();
+  updateHud(); buildAmbient();
   // Simple onboarding: first-timers get a short guided tour (the long intro is optional, via Menu → Watch intro)
   if(!maybeTour()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); }
   addEventListener('resize', resize);

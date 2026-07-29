@@ -579,6 +579,20 @@ body.zen #hud,body.flip #hud{opacity:0;pointer-events:none}
 .rail-share:hover{background:var(--accent-2)}
 .rail-share:active{transform:scale(.94)}
 
+/* living canvas — gentle ambient fireflies (GPU-composited, screen-only) */
+#ambient{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#ambient .amote{position:absolute;border-radius:50%;will-change:transform,opacity;
+  animation:ambDrift var(--d,30s) ease-in-out infinite, ambTwinkle var(--t,5s) ease-in-out infinite;
+  animation-delay:var(--dl,0s), var(--dl2,0s)}
+@keyframes ambDrift{
+  0%,100%{transform:translate(0,0)}
+  25%{transform:translate(var(--ax),calc(-1*var(--ay)))}
+  50%{transform:translate(calc(-1*var(--ax)),var(--ay))}
+  75%{transform:translate(var(--ax),var(--ay))}}
+@keyframes ambTwinkle{0%,100%{opacity:var(--omin,.12)}50%{opacity:var(--omax,.8)}}
+body.no-ambient #ambient,body.flip #ambient,body.reduce-motion #ambient{display:none}
+@media (prefers-reduced-motion:reduce){#ambient{display:none}}
+
 /* magic-garden drifting critters */
 .critter{position:fixed;z-index:40;pointer-events:none;font-size:20px;line-height:1;will-change:transform,opacity;
   animation:critterFloat 2.3s ease-out forwards}
