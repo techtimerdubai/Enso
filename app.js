@@ -616,16 +616,16 @@
         live._ts = live._startMs - session.t0; live._td = Math.max(80, performance.now()-live._startMs);
         noteStroke(live);
         if(live.tool==='garden'){
-          const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
+          const items=capWorld(growGarden(live)); commit(items); animateGarden(items); buzz(12);
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c'); critterBurst(sp.x, sp.y);
         } else if(live.tool==='galaxy'){
-          const items=generateGalaxy(live); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateGalaxy(live)); commit(items); animateGarden(items, 0); buzz(10);
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ffd23f'); critterBurst(sp.x, sp.y, ['✨','🌟','💫','⭐'], true);
         } else if(live.tool==='ocean'){
-          const items=generateOcean(live); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateOcean(live)); commit(items); animateGarden(items, 0); buzz(10);
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['🫧','🐠','🐟','🐚'], false);
         } else if(live.tool==='weather'){
-          const items=generateWeather(live); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateWeather(live)); commit(items); animateGarden(items, 0); buzz(10);
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['☁️','🌧️','🌈','❄️','☀️'], false);
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
@@ -840,6 +840,9 @@
      Same idea as Magic Garden — each stroke scatters themed vector elements (stars,
      planets, comets / fish, bubbles, coral…) along the path. Undoable, crisp at any zoom. */
   const rr=(a,b)=>a+Math.random()*(b-a);
+  // Soft cap: a very long world/garden stroke can't spike item counts (keeps perf smooth).
+  const WORLD_CAP=200;
+  function capWorld(items){ if(items.length>WORLD_CAP) items.length=WORLD_CAP; return items; }
   function gStar(x,y,r,col){ return [
     gI(col, r*0.5, [{x:x-r,y,w:r*0.16},{x,y,w:r*0.55},{x:x+r,y,w:r*0.16}]),
     gI(col, r*0.5, [{x,y:y-r,w:r*0.16},{x,y,w:r*0.55},{x,y:y+r,w:r*0.16}]),
@@ -1416,12 +1419,20 @@
 
   // brush style picker
   const brushModal=document.getElementById('brushModal'), brushGrid=document.getElementById('brushGrid');
-  Object.entries(STYLES).forEach(([key,st])=>{
-    const b=document.createElement('button'); b.type='button'; b.className='brush'; b.dataset.style=key;
-    b.innerHTML=`<span class="em" aria-hidden="true">${st.emoji}</span><span>${st.label}</span>`; b.setAttribute('aria-label', st.label);
-    b.addEventListener('click',()=>{ selectTool(key); highlightBrush(); brushModal.classList.add('hidden'); buzz(8); toast(st.emoji+' '+st.label); });
-    brushGrid.appendChild(b);
-  });
+  const isWorldBrush = k => !!(STYLES[k].world || STYLES[k].garden);
+  (function buildBrushGrid(){
+    const groups=[ { name:'Brushes', keys:Object.keys(STYLES).filter(k=>!isWorldBrush(k)) },
+                   { name:'✦ Magic worlds', keys:Object.keys(STYLES).filter(isWorldBrush) } ];
+    for(const g of groups){
+      const h=document.createElement('div'); h.className='brush-h'; h.textContent=g.name; brushGrid.appendChild(h);
+      for(const key of g.keys){ const st=STYLES[key];
+        const b=document.createElement('button'); b.type='button'; b.className='brush'; b.dataset.style=key;
+        b.innerHTML=`<span class="em" aria-hidden="true">${st.emoji}</span><span>${st.label}</span>`; b.setAttribute('aria-label', st.label);
+        b.addEventListener('click',()=>{ selectTool(key); highlightBrush(); brushModal.classList.add('hidden'); buzz(8); toast(st.emoji+' '+st.label); });
+        brushGrid.appendChild(b);
+      }
+    }
+  })();
   function highlightBrush(){ brushGrid.querySelectorAll('.brush').forEach(b=>b.classList.toggle('on', b.dataset.style===state.tool)); }
   function openBrushPicker(){ highlightBrush(); brushModal.classList.remove('hidden'); pushGuard(); }
   brushBtn.addEventListener('click',()=>{ if(isDrawStyle(state.tool)) openBrushPicker(); else selectTool(lastBrushStyle); setTray('tools', false); buzz(6); });
