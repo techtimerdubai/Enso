@@ -9,7 +9,7 @@
   // desynchronized: low-latency path — the browser paints ink to a fast, un-synced
   // buffer, cutting pen-to-screen lag (biggest perceived-smoothness win on Android).
   const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
-  if(!ctx){ document.body.innerHTML = '<p style="color:#eee;font:16px system-ui;padding:24px">Sorry — your browser can’t run Ensō (no canvas support). Try a recent Chrome, Safari, Firefox or Edge.</p>'; return; }
+  if(!ctx){ document.body.innerHTML=''; const p=document.createElement('p'); p.textContent='Sorry — your browser can’t run Ensō (no canvas support). Try a recent Chrome, Safari, Firefox or Edge.'; p.style.color='#eee'; p.style.font='16px system-ui'; p.style.padding='24px'; document.body.appendChild(p); return; }
   // two offscreen layers: committed ink (cached) + a live-draw overlay. Paper+grid are drawn
   // straight onto the visible canvas each frame (cheap) — one fewer full-screen buffer to hold.
   const inkCv  = document.createElement('canvas'), kctx = inkCv.getContext('2d');
@@ -134,12 +134,6 @@
 
   /* 💛 CRYPTO DONATIONS — replace the YOUR_… placeholders with your own wallet
      addresses. Delete a row you don't want. 100% free: no processor, no backend. */
-  const DONATE = [
-    { sym:'BTC',  name:'Bitcoin',                addr:'YOUR_BTC_ADDRESS',  scheme:'bitcoin' },
-    { sym:'ETH',  name:'Ethereum · USDT/USDC (ERC-20)', addr:'YOUR_ETH_ADDRESS', scheme:'ethereum' },
-    { sym:'SOL',  name:'Solana',                 addr:'YOUR_SOL_ADDRESS',  scheme:'solana' },
-    { sym:'TON',  name:'Toncoin',                addr:'YOUR_TON_ADDRESS',  scheme:'ton' },
-  ];
   const paperColor = () => state.glow ? '#07070c'
     : state.theme === 'dark' ? '#17181c'
     : ((PAPERS.find(x=>x.id===state.paper) || PAPERS[0]).bg);
@@ -650,7 +644,7 @@
     }
   }
   canvas.addEventListener('pointerup', endPointer);
-  canvas.addEventListener('pointercancel', e=>{ if(e.pointerType==='pen'&&penDownCount>0)penDownCount--; pointers.delete(e.pointerId); if(pointers.size<2){pinch=null;pinch0=null;} if(drawingId===e.pointerId){ live=null; drawingId=null; requestRender(); } if(panLast){ panLast=null; document.body.classList.remove('panning'); } });
+  canvas.addEventListener('pointercancel', e=>{ if(e.pointerType==='pen'&&penDownCount>0)penDownCount--; pointers.delete(e.pointerId); if(pointers.size<2){pinch=null;pinch0=null;} if(drawingId===e.pointerId){ live=null; drawingId=null; requestRender(); } if(sel){ sel=null; updateSelBar(); } if(panLast){ panLast=null; document.body.classList.remove('panning'); } });
 
   function pressure(e){
     if(e.pointerType==='pen' && e.pressure>0) return e.pressure;
@@ -1136,7 +1130,7 @@
       else { for(const p of c.pts){ p.x+=off; p.y+=off; } finalizeBB(c); } return c; });
     addItems(clones); pushOp({type:'add', items:clones}); selection=new Set(clones); updateSelBar(); invalidate(); saveSoon(); buzz(10); }
   const selBar=document.getElementById('selBar'), selCount=document.getElementById('selCount');
-  function updateSelBar(){ const n=selection.size; if(selBar) selBar.classList.toggle('hidden', n===0 || state.tool!=='select'); if(selCount) selCount.textContent = n+(n===1?' selected':' selected'); }
+  function updateSelBar(){ const n=selection.size; if(selBar) selBar.classList.toggle('hidden', n===0 || state.tool!=='select'); if(selCount) selCount.textContent = n+(n===1?' item selected':' items selected'); }
   document.getElementById('selDup').addEventListener('click', ()=>{ duplicateSelection(); });
   document.getElementById('selDel').addEventListener('click', ()=>{ deleteSelection(); });
   document.getElementById('selNone').addEventListener('click', ()=>{ clearSelection(); });
@@ -1508,6 +1502,7 @@
     else if(a==='layers') openLayers();
     else if(a==='glow') toggleGlow();
     else if(a==='living') toggleLiving();
+    else if(a==='zen') toggleZen();
     else if(a==='garden'){ selectTool('garden'); toast('🌱 Draw a stem — watch it grow!'); }
     else if(a==='sing') startSing();
     else if(a==='gallery') openGallery();
@@ -1779,7 +1774,11 @@
     o.fillStyle=paperColor(); o.fillRect(0,0,out.width,out.height);
     const ink=document.createElement('canvas'); ink.width=out.width; ink.height=out.height;
     const i=ink.getContext('2d'); i.setTransform(scale,0,0,scale,-bb.minX*scale,-bb.minY*scale);
-    for(const s of strokes){ if(s.tool==='stamp') drawStampItem(i,s); else drawStroke(i,s,0); }
+    // decimation/smoothing (and the lone-dot radius) are keyed to the live zoom; render with the
+    // export scale instead so PNG/SVG/share/gallery output stays crisp even when zoomed out.
+    const camScale0=cam.scale; cam.scale=scale;
+    try{ for(const s of strokes){ if(s.tool==='stamp') drawStampItem(i,s); else drawStroke(i,s,0); } }
+    finally{ cam.scale=camScale0; }
     o.drawImage(ink,0,0); drawWatermark(o, out.width, out.height); return out;
   }
   function exportPNG(){ const out=renderToCanvas(); if(!out){ toast('Nothing to export yet'); return; } out.toBlob(b=>downloadBlob(b,'enso-'+stamp()+'.png'),'image/png'); }
@@ -1834,11 +1833,11 @@
   let guardActive=false;
   function anyOverlay(){ return !sheet.classList.contains('hidden') || !sealModal.classList.contains('hidden')
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
-      || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
+      || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
       || !a11yModal.classList.contains('hidden') || !tour.classList.contains('hidden') || !badgesModal.classList.contains('hidden') || !presetModal.classList.contains('hidden')
       || replay.active || flip.on || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
-  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden'); badgesModal.classList.add('hidden'); presetModal.classList.add('hidden');
+  function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden'); badgesModal.classList.add('hidden'); presetModal.classList.add('hidden');
     if(tour && !tour.classList.contains('hidden')) endTour(false);
     if(flip.on) exitFlip();
     if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
@@ -1983,33 +1982,6 @@
     setTimeout(()=>{ appPrompt.classList.remove('hidden'); document.body.classList.add('apshow'); }, 1500);
   }
 
-  /* ---------------- support / crypto donate ---------------- */
-  const donateModal=document.getElementById('donateModal'), donateList=document.getElementById('donateList');
-  function openDonate(){ renderDonate(); donateModal.classList.remove('hidden'); pushGuard(); }
-  document.getElementById('donateClose').addEventListener('click',()=>donateModal.classList.add('hidden'));
-  donateModal.addEventListener('click', e=>{ if(e.target===donateModal) donateModal.classList.add('hidden'); });
-  function renderDonate(){
-    donateList.innerHTML='';
-    for(const d of DONATE){
-      const set = d.addr && !/^YOUR_/.test(d.addr);
-      const row=document.createElement('div'); row.className='donate-row';
-      const head=document.createElement('div'); head.className='dr-head';
-      const nm=document.createElement('span'); nm.className='dr-name'; nm.textContent=d.name;
-      const sy=document.createElement('span'); sy.className='dr-sym'; sy.textContent=d.sym;
-      head.append(nm,sy); row.appendChild(head);
-      if(set){
-        const ad=document.createElement('div'); ad.className='dr-addr'; ad.textContent=d.addr; row.appendChild(ad);
-        const act=document.createElement('div'); act.className='dr-actions';
-        const cp=document.createElement('button'); cp.className='dr-copy'; cp.textContent='Copy address';
-        cp.onclick=()=>{ const done=()=>{ toast('Copied '+d.sym+' address 📋'); buzz(6); };
-          if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(d.addr).then(done).catch(()=>toast(d.addr)); else toast(d.addr); };
-        act.appendChild(cp);
-        if(d.scheme){ const lk=document.createElement('a'); lk.className='dr-open'; lk.href=d.scheme+':'+d.addr; lk.rel='noopener'; lk.textContent='Open wallet'; act.appendChild(lk); }
-        row.appendChild(act);
-      } else { const td=document.createElement('div'); td.className='dr-todo'; td.textContent='Add your '+d.sym+' address in app.js → DONATE'; row.appendChild(td); }
-      donateList.appendChild(row);
-    }
-  }
 
   /* ---------------- first-visit intro ---------------- */
   let introTimer=0;

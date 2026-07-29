@@ -164,6 +164,8 @@ body.tools-open #toolBtn.tb{background:var(--accent);color:#fff}
 @media (max-width:340px){
   #favColors{display:none}                          /* colour button still opens the full palette */
   .rbtn{width:37px;height:37px} #toolBtn.tb{width:42px}
+  #bar{flex-wrap:wrap;justify-content:center;row-gap:4px}   /* never let end buttons clip off-screen */
+  #bar .sep{display:none}
 }
 
 /* Radial bloom tool dock (bottom-right) */
@@ -251,7 +253,7 @@ body.eyedrop #paper{cursor:crosshair}
 .ghlink:hover{color:var(--fg)}
 
 /* Modal */
-.modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(0,0,0,.5);
+.modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(0,0,0,.5);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:16px}
 .modal-card{padding:22px;width:min(360px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;border-radius:20px}
 .modal-card h3{margin:0 0 4px;font-size:19px;display:flex;align-items:baseline;gap:8px}
@@ -291,7 +293,7 @@ body.eyedrop #paper{cursor:crosshair}
 .layer-list{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:44dvh;overflow-y:auto}
 .layer-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--brd);border-radius:11px;background:rgba(255,255,255,.04)}
 .layer-row.active{border-color:var(--accent);background:rgba(224,80,58,.14)}
-.layer-row button{background:transparent;border:none;color:var(--fg);cursor:pointer;font-size:15px;padding:4px;border-radius:8px;min-width:30px;min-height:30px}
+.layer-row button{background:transparent;border:none;color:var(--fg);cursor:pointer;font-size:15px;padding:4px;border-radius:8px;min-width:36px;min-height:36px}
 .layer-row button:hover{background:rgba(255,255,255,.1)}
 .layer-row .lyr-name{flex:1;text-align:left;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer-row.active .lyr-name{color:var(--accent);font-weight:600}
@@ -562,7 +564,7 @@ body.reduce-motion .critter{display:none}
 /* ---- zoom-level pill ---- */
 #hud{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:6;
   background:var(--glass);border:1px solid var(--brd);color:var(--fg);border-radius:20px;padding:6px 12px;
-  font-size:12.5px;font-variant-numeric:tabular-nums;cursor:pointer;box-shadow:var(--shadow);min-width:46px;min-height:32px;text-align:center}
+  font-size:12.5px;font-variant-numeric:tabular-nums;cursor:pointer;box-shadow:var(--shadow);min-width:46px;min-height:36px;text-align:center}
 #hud:hover{background:var(--glass-2)}
 body.zen #hud,body.flip #hud{opacity:0;pointer-events:none}
 
