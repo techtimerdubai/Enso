@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.techtimerdubai.enso",
+  "appName": "Ensō",
+  "webDir": "www",
+  "server": {
+    "url": "https://techtimerdubai.github.io/Enso/",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#141418",
+    "allowMixedContent": false
+  }
+}

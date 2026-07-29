@@ -1,0 +1,18 @@
+{
+  "name": "enso-native",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor native wrapper for Ensō. It is a thin native shell that loads the live PWA (https://techtimerdubai.github.io/Enso/), so every web deploy (git push) updates the installed Play Store app automatically — no re-submission needed for content or feature changes.",
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

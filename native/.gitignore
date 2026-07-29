@@ -1,0 +1,5 @@
+# Capacitor / Node build artifacts — regenerated locally, not committed.
+node_modules/
+android/
+.gradle/
+*.log

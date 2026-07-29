@@ -1,0 +1,15 @@
+html, body { margin: 0; height: 100%; background: #141418; color: #ecece9; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap {
+  min-height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 24px; gap: 12px;
+}
+.ring {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 6px solid #e0503a; border-right-color: transparent;
+  transform: rotate(35deg); margin-bottom: 6px;
+}
+h1 { font-weight: 600; font-size: 26px; margin: 0; }
+p  { color: #9a968c; max-width: 320px; line-height: 1.5; margin: 0; }

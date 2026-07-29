@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ensō</title>
+  <link rel="stylesheet" href="fallback.css">
+</head>
+<body>
+  <!--
+    This local page is only a fallback. Capacitor is configured (capacitor.config.json →
+    server.url) to load the LIVE app at https://techtimerdubai.github.io/Enso/ directly.
+    You normally never see this page. It only appears if the device has no network AND the
+    site's service-worker cache is empty (e.g. a brand-new install that has never been online).
+  -->
+  <main class="wrap">
+    <div class="ring"></div>
+    <h1>Ensō</h1>
+    <p>Connect to the internet once to load Ensō. After that it works offline.</p>
+  </main>
+  <script>
+    // If we do have a connection, jump straight to the live app.
+    if (navigator.onLine) location.replace('https://techtimerdubai.github.io/Enso/');
+    window.addEventListener('online', function () {
+      location.replace('https://techtimerdubai.github.io/Enso/');
+    });
+  </script>
+</body>
+</html>
