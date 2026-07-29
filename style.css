@@ -542,6 +542,15 @@ body.reduce-motion .critter{display:none}
 .pr-del{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:var(--glass-2);border:1px solid var(--brd);color:var(--muted);font-size:12px;cursor:pointer;line-height:1}
 .pr-del:hover{color:#ff8266}
 
+/* ---- flipbook animation bar ---- */
+#flipBar{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:12;
+  display:flex;align-items:center;gap:5px;padding:7px 10px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 16px)}
+#flipBar button{background:transparent;border:1px solid var(--brd);color:var(--fg);border-radius:9px;min-width:36px;height:36px;padding:0 8px;font-size:13px;cursor:pointer}
+#flipBar button:hover{background:rgba(255,255,255,.1)}
+#flipBar #flipPlay{background:var(--accent);border-color:transparent;color:#fff;font-weight:600;padding:0 12px}
+#flipBar .flip-info{font-size:13px;color:var(--muted);min-width:36px;text-align:center}
+#flipBar .flip-sep{width:1px;height:20px;background:var(--brd);margin:0 3px}
+
 /* ---- QA: consistency, focus, motion ---- */
 :where(button,[role=menuitem],input,a,label,.swatch,.favdot):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .sheet-foot button{min-height:36px}

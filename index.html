@@ -105,6 +105,7 @@
         <button class="stile" data-act="sing" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm10-2a3 3 0 11-6 0 3 3 0 016 0z"/></svg></span>Sing it</button>
         <button class="stile" data-act="inspire" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 013.5 10.9c-.6.5-1 1.2-1 2H9.5c0-.8-.4-1.5-1-2A6 6 0 0112 3z"/></svg></span>Inspire me</button>
         <button class="stile" data-act="presets" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span>My pens</button>
+        <button class="stile" data-act="flip" role="menuitem"><span class="ti" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9.5h16M4 14.5h16M8.5 5v4.5M15.5 5v4.5M8.5 14.5V19M15.5 14.5V19"/></svg></span>Animate</button>
       </div>
     </div>
 
@@ -318,6 +319,21 @@
   <div id="singBar" class="glass hidden" role="group" aria-label="Playing your drawing">
     <span class="sing-note" aria-hidden="true">🎵</span><span>Playing your drawing…</span>
     <button id="singStop" aria-label="Stop">✕ Stop</button>
+  </div>
+
+  <!-- Flipbook / animation controls -->
+  <div id="flipBar" class="glass hidden" role="group" aria-label="Animation controls">
+    <button id="flipPrev" aria-label="Previous frame" title="Previous frame">◀</button>
+    <span id="flipInfo" class="flip-info">1/1</span>
+    <button id="flipNext" aria-label="Next frame" title="Next frame">▶</button>
+    <span class="flip-sep" aria-hidden="true"></span>
+    <button id="flipAdd" aria-label="Add blank frame" title="Add frame">＋</button>
+    <button id="flipDup" aria-label="Duplicate frame" title="Copy frame">⧉</button>
+    <button id="flipDel" aria-label="Delete frame" title="Delete frame">🗑</button>
+    <span class="flip-sep" aria-hidden="true"></span>
+    <button id="flipPlay" aria-label="Play animation" title="Play">▶ Play</button>
+    <button id="flipExport" aria-label="Save as video" title="Save video">⤴</button>
+    <button id="flipExit" aria-label="Exit animation" title="Exit">✕</button>
   </div>
 
   <!-- Replay overlay -->

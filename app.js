@@ -82,6 +82,7 @@
     garden:      { label:'Magic garden', emoji:'🌱', wp:0.5,  ws:0.08, taper:3, garden:true },
     galaxy:      { label:'Galaxy',       emoji:'🌌', wp:0.5,  ws:0.08, taper:3, world:true },
     ocean:       { label:'Ocean',        emoji:'🌊', wp:0.5,  ws:0.08, taper:3, world:true },
+    weather:     { label:'Weather',      emoji:'⛅', wp:0.5,  ws:0.08, taper:3, world:true },
   };
   const isDrawStyle = t => STYLES[t] != null;
 
@@ -239,6 +240,17 @@
       else drawScene(octx, strokes, replay.revealed);
       ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(overCv, 0, 0);
       return;
+    }
+    if(flip.on && flip.playing){                            // flipbook playback: show one frame
+      octx.setTransform(1,0,0,1,0,0); octx.clearRect(0,0,overCv.width,overCv.height);
+      worldTransform(octx); drawScene(octx, (flip.frames[flip.playIdx]||{items:[]}).items, Infinity);
+      ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(overCv, 0, 0);
+      return;
+    }
+    if(flip.on && flip.onion && flip.idx>0){                // onion-skin: previous frame, faint, under the current one
+      octx.setTransform(1,0,0,1,0,0); octx.clearRect(0,0,overCv.width,overCv.height);
+      worldTransform(octx); octx.globalAlpha=0.25; drawScene(octx, flip.frames[flip.idx-1].items, Infinity); octx.globalAlpha=1;
+      ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(overCv, 0, 0);
     }
     if(!cacheValid) rebuildInk();
     if(live){
@@ -523,6 +535,7 @@
 
   canvas.addEventListener('pointerdown', e => {
     stopInertia(); stopCamAnim();
+    if(flip.on && flip.playing){ flipStop(); return; }   // tap to stop playback, then edit
     if(document.body.classList.contains('tools-open') || document.body.classList.contains('colors-open')) document.body.classList.remove('tools-open','colors-open');
     if(e.pointerType==='pen') penDownCount++;
     // palm rejection — ignore fingers while a stylus is drawing
@@ -548,6 +561,7 @@
     const col = state.tool==='garden' ? '#4a9d54'
       : state.tool==='galaxy' ? '#b39ddb'
       : state.tool==='ocean' ? '#5fc0e6'
+      : state.tool==='weather' ? '#cfe4f5'
       : (state.rainbow ? nextRainbow() : state.color);
     // width is stored in WORLD units, so divide the screen-px slider size by the zoom:
     // brushes then paint the SAME on-screen thickness at any zoom (WYSIWYG), and zooming
@@ -610,6 +624,9 @@
         } else if(live.tool==='ocean'){
           const items=generateOcean(live); commit(items); animateGarden(items, 0); buzz(10);
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['🫧','🐠','🐟','🐚'], false);
+        } else if(live.tool==='weather'){
+          const items=generateWeather(live); commit(items); animateGarden(items, 0); buzz(10);
+          const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['☁️','🌧️','🌈','❄️','☀️'], false);
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
             const shaped=recognizeShape(live);
@@ -880,6 +897,32 @@
       else if(q<0.84) items.push(...gCoral(P.x,P.y,w));
       else if(q<0.93) items.push(...gStarfish(P.x,P.y,w));
       else items.push(...gShell(P.x,P.y,w));
+    }
+    return items;
+  }
+  function gCloud(x,y,w){ const out=[], s=w, body='#eef4fb', shade='#cdd9e6';
+    out.push(gDot(x-1.4*s,y+1.2*s,s*1.7,shade)); out.push(gDot(x+1.6*s,y+1.2*s,s*1.8,shade));
+    const P=[[-2.2,0.2,1.7],[0,-0.6,2.2],[2.2,0.1,1.8],[1,0.9,1.5],[-1,0.9,1.5]];
+    for(const p of P) out.push(gDot(x+p[0]*s, y+p[1]*s, s*p[2], body)); return out; }
+  function gRain(x,y,w){ const out=[], col='#4a90d9', n=3+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++){ const rx=x+rr(-2.5*w,2.5*w), ry=y+rr(0,w*1.5); out.push(gI(col, w*0.35, [{x:rx,y:ry,w:w*0.35},{x:rx-w*0.2,y:ry+w*1.6,w:w*0.12}])); } return out; }
+  function gSun(x,y,w){ const out=[gDot(x,y,w*1.8,'#ffd23f')], r=w*2.6;
+    for(let i=0;i<10;i++){ const a=i/10*6.2832; out.push(gI('#ffcf4d', w*0.4, [{x:x+Math.cos(a)*r*0.72,y:y+Math.sin(a)*r*0.72,w:w*0.4},{x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,w:w*0.12}])); } return out; }
+  function gRainbow(x,y,w){ const out=[], cols=['#ff5d5d','#ff8c42','#ffd23f','#57b46a','#4db6ff','#9a5bff'], R=w*rr(4,6.5);
+    for(let c=0;c<6;c++){ const rc=R-c*w*0.5, pts=[]; for(let i=0;i<=16;i++){ const a=Math.PI + i/16*Math.PI; pts.push({x:x+Math.cos(a)*rc, y:y+Math.sin(a)*rc, w:w*0.42}); } out.push(gI(cols[c], w*0.42, pts, true)); } return out; }
+  function gSnow(x,y,w){ const out=[], col='#bcd4ea', n=4+Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++) out.push(gDot(x+rr(-2.5*w,2.5*w), y+rr(-2*w,2*w), w*rr(0.3,0.6), col)); return out; }
+  function gBolt(x,y,w){ return [ gI('#f2b705', w*0.5, [{x,y,w:w*0.5},{x:x-w,y:y+w*1.6,w:w*0.4},{x:x+w*0.6,y:y+w*1.8,w:w*0.4},{x:x-w*0.6,y:y+w*3.6,w:w*0.12}]) ]; }
+  function generateWeather(stroke){
+    const pts=stroke.pts, items=[]; if(!pts.length) return items;
+    const w=stroke.size||6/cam.scale; let total=0; for(let i=1;i<pts.length;i++) total+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+    const n=clamp(Math.floor(total/(w*6)),3,16);
+    for(let k=0;k<=n;k++){ const f=n?k/n:0.5, P=samplePath(pts,f), q=Math.random();
+      if(q<0.4){ items.push(...gCloud(P.x,P.y,w)); if(Math.random()<0.55) items.push(...gRain(P.x,P.y+w*2.4,w)); }
+      else if(q<0.58) items.push(...gSun(P.x,P.y,w));
+      else if(q<0.74) items.push(...gRainbow(P.x,P.y,w));
+      else if(q<0.9) items.push(...gSnow(P.x,P.y,w));
+      else items.push(...gBolt(P.x,P.y,w));
     }
     return items;
   }
@@ -1457,6 +1500,7 @@
     else if(a==='gallery') openGallery();
     else if(a==='music') openMusic();
     else if(a==='inspire') inspireMe();
+    else if(a==='flip') startFlip();
     else if(a==='presets') openPresets();
     else if(a==='badges') openBadges();
     else if(a==='tour') startTour();
@@ -1779,10 +1823,11 @@
       || !stickerModal.classList.contains('hidden') || !brushModal.classList.contains('hidden') || !layerModal.classList.contains('hidden')
       || !donateModal.classList.contains('hidden') || !galleryModal.classList.contains('hidden') || !musicModal.classList.contains('hidden') || !whatsnew.classList.contains('hidden') || !creditsModal.classList.contains('hidden')
       || !a11yModal.classList.contains('hidden') || !tour.classList.contains('hidden') || !badgesModal.classList.contains('hidden') || !presetModal.classList.contains('hidden')
-      || replay.active || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
+      || replay.active || flip.on || state.singing || document.body.classList.contains('zen') || !!state.pendingStamp; }
   function pushGuard(){ if(!guardActive){ guardActive=true; try{ history.pushState({enso:1},''); }catch(e){} } }
   function closeAllOverlays(){ toggleSheet(false); sealModal.classList.add('hidden'); stickerModal.classList.add('hidden'); brushModal.classList.add('hidden'); layerModal.classList.add('hidden'); donateModal.classList.add('hidden'); galleryModal.classList.add('hidden'); musicModal.classList.add('hidden'); whatsnew.classList.add('hidden'); creditsModal.classList.add('hidden'); a11yModal.classList.add('hidden'); badgesModal.classList.add('hidden'); presetModal.classList.add('hidden');
     if(tour && !tour.classList.contains('hidden')) endTour(false);
+    if(flip.on) exitFlip();
     if(replay.active) exitReplay(); stopSing(); musicStop(); document.body.classList.remove('zen'); clearPendingStamp(); }
   window.addEventListener('popstate', ()=>{ guardActive=false; if(anyOverlay()) closeAllOverlays(); });
 
@@ -2202,14 +2247,14 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-4';
+  const APP_VER='wow-5';
   const WN_ITEMS=[
-    '🌌 New Galaxy & 🌊 Ocean brushes — paint whole worlds',
+    '🎬 Animate — turn your drawings into little movies',
+    '⛅ New Weather brush — clouds, rain, rainbows',
+    '🌌 Galaxy & 🌊 Ocean world brushes',
     '🌱 A livelier Magic Garden with fireflies',
-    '🏆 Earn badges as you create',
-    '🖊️ Save your favourite pens (My pens)',
-    '🎨 Lots more stickers to collect',
-    '✨ A cleaner, gentler start',
+    '🏆 Badges & 🖊️ saved pens',
+    '✨ 90+ stickers to collect',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
     if(list){ list.innerHTML=''; for(const t of WN_ITEMS){ const li=document.createElement('li'); li.textContent=t; list.appendChild(li); } }
@@ -2371,6 +2416,65 @@
     o.fillStyle='rgba(255,255,255,0.94)'; o.textAlign='left'; o.textBaseline='middle';
     o.fillText(txt, cx+ringR+gap, cy+s*0.04); o.restore();
   }
+
+  /* ---------------- Flipbook — frame-by-frame animation ----------------
+     Each frame is its own set of strokes (drawn with any brush). Onion-skin shows the
+     previous frame faintly; Play cycles the frames; Export records a looping video. */
+  const flip={ on:false, frames:[], idx:0, playing:false, raf:0, onion:true, fps:7, playIdx:0, last:0, rec:null, chunks:[] };
+  function cloneStrokeFull(s){ const c=cloneItem(s); if(c.tool==='stamp'){ c.bb=stampBB(c); c._img=s._img; } else finalizeBB(c); if(s._ts!=null){ c._ts=s._ts; c._td=s._td; } return c; }
+  function flipInfo(){ const el=document.getElementById('flipInfo'); if(el) el.textContent=(flip.idx+1)+'/'+flip.frames.length; }
+  function startFlip(){
+    if(flip.on) return;
+    flip.on=true; document.body.classList.add('flip'); flip.frames=[{ items: strokes }]; flip.idx=0; flip.playing=false;
+    const bar=document.getElementById('flipBar'); if(bar) bar.classList.remove('hidden');
+    const pb=document.getElementById('flipPlay'); if(pb) pb.textContent='▶ Play';
+    flipInfo(); pushGuard(); toast('🎬 Animate — draw a frame, add more, then Play'); invalidate();
+  }
+  function exitFlip(){
+    if(!flip.on) return; flipStop();
+    flip.frames[flip.idx].items = strokes;                  // keep the current frame as the drawing
+    flip.on=false; document.body.classList.remove('flip');
+    const bar=document.getElementById('flipBar'); if(bar) bar.classList.add('hidden');
+    flip.frames=[]; gridRebuild(); invalidate(); saveSoon();
+  }
+  function loadFrame(i){ flip.idx=i; strokes=flip.frames[i].items; undoStack.length=0; redoStack.length=0; selection.clear(); gridRebuild(); flipInfo(); invalidate(); }
+  function switchFrame(i){ if(i<0||i>=flip.frames.length||!flip.on) return; flipStop(); flip.frames[flip.idx].items=strokes; loadFrame(i); }
+  function addFrame(dup){ if(!flip.on) return; flipStop(); flip.frames[flip.idx].items=strokes;
+    const items = dup ? strokes.map(cloneStrokeFull) : [];
+    flip.frames.splice(flip.idx+1,0,{items}); loadFrame(flip.idx+1); buzz(8); }
+  function delFrame(){ if(!flip.on) return; flipStop();
+    if(flip.frames.length<=1){ strokes.length=0; gridRebuild(); invalidate(); saveSoon(); return; }
+    flip.frames.splice(flip.idx,1); if(flip.idx>=flip.frames.length) flip.idx=flip.frames.length-1;
+    loadFrame(flip.idx); buzz(10); }
+  function flipStop(){ if(!flip.playing) return; flip.playing=false; cancelAnimationFrame(flip.raf); const p=document.getElementById('flipPlay'); if(p) p.textContent='▶ Play'; invalidate(); }
+  function flipPlay(){ if(!flip.on) return; if(flip.playing){ flipStop(); return; } if(flip.frames.length<2){ toast('Add another frame first ✍️'); return; }
+    flip.frames[flip.idx].items=strokes; flip.playing=true; flip.playIdx=0; flip.last=0;
+    const p=document.getElementById('flipPlay'); if(p) p.textContent='⏸ Stop'; cancelAnimationFrame(flip.raf); flipLoop(); }
+  function flipLoop(){ const now=performance.now(); if(!flip.last) flip.last=now;
+    if(now-flip.last >= 1000/flip.fps){ flip.last=now; flip.playIdx=(flip.playIdx+1)%flip.frames.length; }
+    requestRender(); if(flip.playing) flip.raf=requestAnimationFrame(flipLoop); }
+  function flipExport(share){
+    if(!flip.on || flip.frames.length<2){ toast('Add another frame first ✍️'); return; }
+    if(!canvas.captureStream || typeof MediaRecorder==='undefined'){ toast('Recording not supported here'); return; }
+    flip.frames[flip.idx].items=strokes;
+    try{
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      const stream=canvas.captureStream(30); flip.chunks=[];
+      const rec=new MediaRecorder(stream,{ mimeType:type, videoBitsPerSecond:8_000_000 }); flip.rec=rec;
+      rec.ondataavailable=e=>{ if(e.data.size) flip.chunks.push(e.data); };
+      rec.onstop=()=>{ const blob=new Blob(flip.chunks,{type:'video/webm'}); try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){} flip.rec=null;
+        if(share) shareReplayBlob(blob); else { downloadBlob(blob,'enso-animation-'+stamp()+'.webm'); toast('Animation saved 🎬'); } };
+      rec.start(); flip.playing=true; flip.playIdx=0; flip.last=0;
+      const p=document.getElementById('flipPlay'); if(p) p.textContent='⏸ Stop'; cancelAnimationFrame(flip.raf); flipLoop();
+      const ms=2*flip.frames.length*(1000/flip.fps)+250;
+      setTimeout(()=>{ try{ if(flip.rec && flip.rec.state!=='inactive') flip.rec.stop(); }catch(e){} flipStop(); }, ms);
+      toast('Filming your animation…');
+    }catch(e){ toast('Could not record'); }
+  }
+  { const g=id=>document.getElementById(id);
+    if(g('flipPrev')){ g('flipPrev').onclick=()=>switchFrame(flip.idx-1); g('flipNext').onclick=()=>switchFrame(flip.idx+1);
+      g('flipAdd').onclick=()=>addFrame(false); g('flipDup').onclick=()=>addFrame(true); g('flipDel').onclick=delFrame;
+      g('flipPlay').onclick=flipPlay; g('flipExport').onclick=()=>flipExport(true); g('flipExit').onclick=exitFlip; } }
 
   /* ---------------- boot ---------------- */
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
