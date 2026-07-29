@@ -572,6 +572,7 @@
     const t0 = e.timeStamp || performance.now();
     const fw = toWorld(live._fx(e.clientX, t0), live._fy(e.clientY, t0));
     addPoint(live, fw.x, fw.y, pressure(e), 0);
+    sfx('draw');
     hideHint(); requestRender();
   });
 
@@ -616,21 +617,21 @@
         live._ts = live._startMs - session.t0; live._td = Math.max(80, performance.now()-live._startMs);
         noteStroke(live);
         if(live.tool==='garden'){
-          const items=capWorld(growGarden(live)); commit(items); animateGarden(items); buzz(12);
+          const items=capWorld(growGarden(live)); commit(items); animateGarden(items); buzz(12); sfx('magic');
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c'); critterBurst(sp.x, sp.y);
         } else if(live.tool==='galaxy'){
-          const items=capWorld(generateGalaxy(live)); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateGalaxy(live)); commit(items); animateGarden(items, 0); buzz(10); sfx('magic');
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ffd23f'); critterBurst(sp.x, sp.y, ['✨','🌟','💫','⭐'], true);
         } else if(live.tool==='ocean'){
-          const items=capWorld(generateOcean(live)); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateOcean(live)); commit(items); animateGarden(items, 0); buzz(10); sfx('magic');
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['🫧','🐠','🐟','🐚'], false);
         } else if(live.tool==='weather'){
-          const items=capWorld(generateWeather(live)); commit(items); animateGarden(items, 0); buzz(10);
+          const items=capWorld(generateWeather(live)); commit(items); animateGarden(items, 0); buzz(10); sfx('magic');
           const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['☁️','🌧️','🌈','❄️','☀️'], false);
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
             const shaped=recognizeShape(live);
-            if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); toast('✦ Snapped to '+shaped.kind);
+            if(shaped){ live.pts=shaped.pts; live.snapped=true; finalizeBB(live); buzz(10); sfx('sparkle'); toast('✦ Snapped to '+shaped.kind);
               const bb=live.bb; if(bb){ const sp=worldToScreen((bb.minX+bb.maxX)/2,(bb.minY+bb.maxY)/2); sparkleBurst(sp.x, sp.y, live.color); } }
           }
           commit(state.sym ? [live, ...symCopies(live)] : [live]);
@@ -1269,7 +1270,7 @@
     activePalette.forEach((s)=>{ const el=document.createElement('button'); el.className='swatch'; el.type='button';
       el.dataset.c=s.c.toLowerCase(); el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
       if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
-      el.addEventListener('click',()=>{ setColor(s.c, el); buzz(6); });
+      el.addEventListener('click',()=>{ setColor(s.c, el); buzz(6); sfx('tap'); });
       paletteWrap.appendChild(el); });
     const m=sw.querySelector('.swatch[data-c="'+(state.color||'').toLowerCase()+'"]'); if(m) m.classList.add('active'); }
   renderPalette();
@@ -1325,8 +1326,8 @@
     toolBtn.setAttribute('aria-expanded', document.body.classList.contains('tools-open')?'true':'false');
     colorBtn.setAttribute('aria-expanded', document.body.classList.contains('colors-open')?'true':'false');
   }
-  toolBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('tools', !document.body.classList.contains('tools-open')); buzz(6); });
-  colorBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('colors', !document.body.classList.contains('colors-open')); buzz(6); });
+  toolBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('tools', !document.body.classList.contains('tools-open')); buzz(6); sfx('tap'); });
+  colorBtn.addEventListener('click', e=>{ e.stopPropagation(); setTray('colors', !document.body.classList.contains('colors-open')); buzz(6); sfx('tap'); });
   document.addEventListener('click', e=>{
     if(document.body.classList.contains('tools-open') && !toolTray.contains(e.target) && !toolBtn.contains(e.target)) setTray('tools', false);
     if(document.body.classList.contains('colors-open') && !colorTray.contains(e.target) && !colorBtn.contains(e.target)) setTray('colors', false);
@@ -1337,7 +1338,7 @@
   function renderFavs(){ favWrap.innerHTML=''; favEls.length=0;
     activePalette.slice(0,4).forEach((s)=>{ const el=document.createElement('button'); el.type='button'; el.className='favdot'; el.style.background=s.c; el.title=s.n; el.setAttribute('aria-label', s.n);
       if(s.c.toLowerCase()==='#ffffff') el.style.boxShadow='inset 0 0 0 1px rgba(0,0,0,.25)';
-      el.addEventListener('click',()=>{ setColor(s.c); buzz(6); }); favWrap.appendChild(el); favEls.push({el, c:s.c.toLowerCase()}); });
+      el.addEventListener('click',()=>{ setColor(s.c); buzz(6); sfx('tap'); }); favWrap.appendChild(el); favEls.push({el, c:s.c.toLowerCase()}); });
     updateFav(); }
   function updateFav(){ favEls.forEach(f=>f.el.classList.toggle('on', !state.rainbow && (state.color||'').toLowerCase()===f.c)); }
   renderFavs();
@@ -1401,7 +1402,7 @@
     const el = isDrawStyle(state.tool) ? brushBtn : document.querySelector('.tool[data-tool="'+state.tool+'"]');
     if(el){ const svg=el.querySelector('svg'); if(svg && toolIco) toolIco.innerHTML = svg.outerHTML; }
   }
-  document.querySelectorAll('.tool[data-tool]').forEach(b=>b.addEventListener('click',()=>{ selectTool(b.dataset.tool); setTray('tools', false); buzz(6); }));
+  document.querySelectorAll('.tool[data-tool]').forEach(b=>b.addEventListener('click',()=>{ selectTool(b.dataset.tool); setTray('tools', false); buzz(6); sfx('select'); }));
   function selectTool(tool){ state.tool=tool; clearPendingStamp();
     if(isDrawStyle(tool)) lastBrushStyle = tool;
     const draw = isDrawStyle(tool);
@@ -1428,7 +1429,7 @@
       for(const key of g.keys){ const st=STYLES[key];
         const b=document.createElement('button'); b.type='button'; b.className='brush'; b.dataset.style=key;
         b.innerHTML=`<span class="em" aria-hidden="true">${st.emoji}</span><span>${st.label}</span>`; b.setAttribute('aria-label', st.label);
-        b.addEventListener('click',()=>{ selectTool(key); highlightBrush(); brushModal.classList.add('hidden'); buzz(8); toast(st.emoji+' '+st.label); });
+        b.addEventListener('click',()=>{ selectTool(key); highlightBrush(); brushModal.classList.add('hidden'); buzz(8); sfx('select'); toast(st.emoji+' '+st.label); });
         brushGrid.appendChild(b);
       }
     }
@@ -1439,8 +1440,8 @@
   document.getElementById('brushClose').addEventListener('click',()=>brushModal.classList.add('hidden'));
   const sizeRange=document.getElementById('sizeRange');
   sizeRange.addEventListener('input',()=>{ state.size=+sizeRange.value; });
-  document.getElementById('undo').addEventListener('click', ()=>{ undo(); buzz(6); });
-  document.getElementById('redo').addEventListener('click', ()=>{ redo(); buzz(6); });
+  document.getElementById('undo').addEventListener('click', ()=>{ undo(); buzz(6); sfx('tap'); });
+  document.getElementById('redo').addEventListener('click', ()=>{ redo(); buzz(6); sfx('tap'); });
   { const sb=document.getElementById('shareBtn'); if(sb) sb.addEventListener('click', ()=>{ shareImage(); buzz(8); }); }
 
   const symBtn=document.getElementById('symBtn');
@@ -1458,7 +1459,7 @@
     const items = strokes.slice();
     removeItems(items); pushOp({type:'delete', items});   // undoable via the undo button — no dialog, no message
     selection.clear(); sel=null; updateSelBar();
-    invalidate(); saveSoon(); buzz(14);
+    invalidate(); saveSoon(); buzz(14); sfx('whoosh');
   }
   // playful "whoosh into the trash": the drawing squashes, then shrinks and flies into the
   // trash button (which wiggles), revealing the fresh blank canvas. GPU-friendly CSS on a snapshot.
@@ -1555,7 +1556,7 @@
   function placeStamp(sx, sy){
     const p=state.pendingStamp; const w=toWorld(sx,sy); const size=(p.size||80)/cam.scale;
     const st=makeStamp(p.dataURL, w.x, w.y, size, p.img);
-    redoStack.length=0; commit([st]); clearPendingStamp(); buzz(14); sparkleBurst(sx, sy); requestRender();
+    redoStack.length=0; commit([st]); clearPendingStamp(); buzz(14); sfx('pop'); sparkleBurst(sx, sy); requestRender();
   }
   function makeStamp(dataURL, x, y, size, img, ar, rot){
     const st={ tool:'stamp', dataURL, x, y, size, ar:ar||1, rot:rot||0, layer:activeLayer };
@@ -2265,14 +2266,14 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-6';
+  const APP_VER='wow-7';
   const WN_ITEMS=[
-    '✨ Living canvas — your art now gently comes alive',
+    '✨ Living canvas — your art gently comes alive',
+    '🔊 Gentle sounds (turn off in Accessibility)',
     '🎬 Animate flipbooks & ⛅ paint the Weather',
     '🌌 Galaxy & 🌊 Ocean world brushes',
-    '🏆 Badges & 🖊️ saved pens',
-    '🔍 Zoom indicator + a bigger-text option',
-    '🎨 A tidier, clearer menu',
+    '🏆 Badges, saved pens & 90+ stickers',
+    '🔍 Zoom & bigger-text options + a tidier menu',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
     if(list){ list.innerHTML=''; for(const t of WN_ITEMS){ const li=document.createElement('li'); li.textContent=t; list.appendChild(li); } }
@@ -2315,7 +2316,7 @@
   function saveStats(){ try{ localStorage.setItem(STAT_KEY, JSON.stringify(stats)); localStorage.setItem(BADGE_KEY, JSON.stringify(earnedBadges)); }catch(e){} }
   function checkBadges(){ const newly=[];
     for(const b of BADGES){ if(earnedBadges.indexOf(b.id)<0 && b.test(stats)){ earnedBadges.push(b.id); newly.push(b); } }
-    if(newly.length){ saveStats(); newly.forEach((b,i)=>setTimeout(()=>{ toast('🏆 Badge: '+b.name+' '+b.emoji); buzz(18); sparkleBurst(innerWidth/2, 92, '#ffd23f'); }, i*1500)); }
+    if(newly.length){ saveStats(); newly.forEach((b,i)=>setTimeout(()=>{ toast('🏆 Badge: '+b.name+' '+b.emoji); buzz(18); sfx('badge'); sparkleBurst(innerWidth/2, 92, '#ffd23f'); }, i*1500)); }
   }
   function noteStroke(s){ stats.strokes++; if(s && s.color) stats.colors[s.color]=1; if(state.rainbow) stats.rainbow=true; if(state.sym) stats.mandala=true; if(s && s.tool==='garden') stats.gardens++; saveStats(); checkBadges(); }
   function renderBadges(){ if(!badgesGrid) return; badgesGrid.innerHTML='';
@@ -2371,17 +2372,50 @@
   function inspireMe(){ let i; do{ i=Math.floor(Math.random()*PROMPTS.length); }while(i===lastPrompt && PROMPTS.length>1); lastPrompt=i;
     toast('✨ Try drawing: '+PROMPTS[i]); buzz(8); }
 
+  /* ---------------- Sound design — tiny procedural SFX (offline, no files) ---------------- */
+  const SOUND_KEY='enso.sound';
+  let soundOn=(()=>{ try{ return localStorage.getItem(SOUND_KEY)!=='0'; }catch(e){ return true; } })();
+  let sfxCtx=null, sfxMaster=null, sfxLast=0;
+  function sfxInit(){ if(sfxCtx) return sfxCtx;
+    try{ sfxCtx=new (window.AudioContext||window.webkitAudioContext)(); sfxMaster=sfxCtx.createGain(); sfxMaster.gain.value=0.3; sfxMaster.connect(sfxCtx.destination); }catch(e){ sfxCtx=null; }
+    return sfxCtx; }
+  function tone(freq, dur, type, when, peak){ const ac=sfxCtx, o=ac.createOscillator(), g=ac.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(peak||0.3, when+0.008); g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+    o.connect(g); g.connect(sfxMaster); o.start(when); o.stop(when+dur+0.02); return o; }
+  function sfx(type){
+    if(!soundOn) return; const ac=sfxInit(); if(!ac) return; if(ac.state==='suspended') ac.resume();
+    const t=ac.currentTime;
+    if(type==='draw'||type==='tap'){ if(performance.now()-sfxLast<45) return; sfxLast=performance.now(); }
+    switch(type){
+      case 'draw': tone(430,0.055,'triangle',t,0.05); break;
+      case 'tap': tone(680,0.05,'sine',t,0.1); break;
+      case 'select': tone(560,0.05,'sine',t,0.13); tone(860,0.07,'sine',t+0.04,0.1); break;
+      case 'pop': { const o=tone(380,0.14,'sine',t,0.28); o.frequency.exponentialRampToValueAtTime(150,t+0.13); break; }
+      case 'sparkle': [900,1200,1500,1800].forEach((f,i)=>tone(f,0.13,'sine',t+i*0.04,0.12)); break;
+      case 'magic': [523,659,784,988].forEach((f,i)=>tone(f,0.5,'triangle',t+i*0.05,0.09)); break;
+      case 'badge': [523,659,784,1046].forEach((f,i)=>tone(f,0.34,'triangle',t+i*0.08,0.2)); break;
+      case 'whoosh': { const buf=ac.createBuffer(1,ac.sampleRate*0.3,ac.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+        const src=ac.createBufferSource(); src.buffer=buf; const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.setValueAtTime(1800,t); bp.frequency.exponentialRampToValueAtTime(300,t+0.28); bp.Q.value=0.8;
+        const g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.22,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
+        src.connect(bp); bp.connect(g); g.connect(sfxMaster); src.start(t); src.stop(t+0.32); break; }
+    }
+  }
+  function setSound(on){ soundOn=on; try{ localStorage.setItem(SOUND_KEY, on?'1':'0'); }catch(e){} }
+
   /* ---------------- Accessibility settings ---------------- */
   const a11yModal=document.getElementById('a11yModal');
   const A11Y_KEY='enso.a11y', a11y={ contrast:false, big:false, motion:false };
   function applyA11y(){ document.body.classList.toggle('hc', a11y.contrast); document.documentElement.classList.toggle('bigtext', a11y.big); document.body.classList.toggle('reduce-motion', a11y.motion); }
   function saveA11y(){ try{ localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); }catch(e){} }
   function openA11y(){ if(!a11yModal) return;
+    document.getElementById('a11ySound').checked=soundOn;
     document.getElementById('a11yContrast').checked=a11y.contrast; document.getElementById('a11yBig').checked=a11y.big; document.getElementById('a11yMotion').checked=a11y.motion;
     a11yModal.classList.remove('hidden'); pushGuard(); }
   if(a11yModal){
     const bind=(id,key)=>{ const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ a11y[key]=el.checked; applyA11y(); saveA11y(); buzz(4); }); };
     bind('a11yContrast','contrast'); bind('a11yBig','big'); bind('a11yMotion','motion');
+    { const s=document.getElementById('a11ySound'); if(s) s.addEventListener('change',()=>{ setSound(s.checked); if(s.checked) sfx('select'); buzz(4); }); }
     document.getElementById('a11yClose').addEventListener('click',()=>a11yModal.classList.add('hidden'));
     a11yModal.addEventListener('click', e=>{ if(e.target===a11yModal) a11yModal.classList.add('hidden'); });
   }
