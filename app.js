@@ -80,6 +80,8 @@
     neon:        { label:'Neon glow',    emoji:'💡', wp:0.4,  ws:0.1,  taper:4, neon:true },
     water:       { label:'Watercolour',  emoji:'💧', wp:0.6,  ws:0.04, taper:2, alpha:0.5, blend:'multiply', water:true },
     garden:      { label:'Magic garden', emoji:'🌱', wp:0.5,  ws:0.08, taper:3, garden:true },
+    galaxy:      { label:'Galaxy',       emoji:'🌌', wp:0.5,  ws:0.08, taper:3, world:true },
+    ocean:       { label:'Ocean',        emoji:'🌊', wp:0.5,  ws:0.08, taper:3, world:true },
   };
   const isDrawStyle = t => STYLES[t] != null;
 
@@ -543,7 +545,10 @@
 
     drawingId = e.pointerId; redoStack.length = 0;
     const w = toWorld(e.clientX, e.clientY);
-    const col = state.tool==='garden' ? '#4a9d54' : (state.rainbow ? nextRainbow() : state.color);
+    const col = state.tool==='garden' ? '#4a9d54'
+      : state.tool==='galaxy' ? '#b39ddb'
+      : state.tool==='ocean' ? '#5fc0e6'
+      : (state.rainbow ? nextRainbow() : state.color);
     // width is stored in WORLD units, so divide the screen-px slider size by the zoom:
     // brushes then paint the SAME on-screen thickness at any zoom (WYSIWYG), and zooming
     // in yields finer world strokes → effectively unlimited detail on the endless canvas.
@@ -599,6 +604,12 @@
         if(live.tool==='garden'){
           const items=growGarden(live); commit(items); animateGarden(items); buzz(12);
           const tip=live.pts[live.pts.length-1]; const sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ff6f9c'); critterBurst(sp.x, sp.y);
+        } else if(live.tool==='galaxy'){
+          const items=generateGalaxy(live); commit(items); animateGarden(items, 0); buzz(10);
+          const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#ffd23f'); critterBurst(sp.x, sp.y, ['✨','🌟','💫','⭐'], true);
+        } else if(live.tool==='ocean'){
+          const items=generateOcean(live); commit(items); animateGarden(items, 0); buzz(10);
+          const tip=live.pts[live.pts.length-1], sp=worldToScreen(tip.x,tip.y); sparkleBurst(sp.x, sp.y, '#4db6ff'); critterBurst(sp.x, sp.y, ['🫧','🐠','🐟','🐚'], false);
         } else {
           if(state.shapeSnap && isDrawStyle(live.tool) && live.tool!=='marker'){
             const shaped=recognizeShape(live);
@@ -808,10 +819,76 @@
     else items.push(...gTulip(tip.x,tip.y, el*0.9, gpick(G_FLOWER), w));
     return items;
   }
-  // gentle drifting critters (butterfly/bee/bird/petal) rise from a finished plant
-  function critterBurst(sx, sy){
+  /* ---------------- World brushes: Galaxy & Ocean ----------------
+     Same idea as Magic Garden — each stroke scatters themed vector elements (stars,
+     planets, comets / fish, bubbles, coral…) along the path. Undoable, crisp at any zoom. */
+  const rr=(a,b)=>a+Math.random()*(b-a);
+  function gStar(x,y,r,col){ return [
+    gI(col, r*0.5, [{x:x-r,y,w:r*0.16},{x,y,w:r*0.55},{x:x+r,y,w:r*0.16}]),
+    gI(col, r*0.5, [{x,y:y-r,w:r*0.16},{x,y,w:r*0.55},{x,y:y+r,w:r*0.16}]),
+    gDot(x,y,r*0.7,col) ]; }
+  function gRing(x,y,col,wid,rx,ry,rot){ rx=rx||1; ry=ry||rx; rot=rot||0; const pts=[],N=18,cs=Math.cos(rot),sn=Math.sin(rot);
+    for(let i=0;i<=N;i++){ const a=i/N*6.2832, ex=Math.cos(a)*rx, ey=Math.sin(a)*ry; pts.push({x:x+ex*cs-ey*sn, y:y+ex*sn+ey*cs, w:wid}); }
+    return gI(col,wid,pts,true); }
+  function gPlanet(x,y,r,col){ return [ gDot(x,y,r,col), gRing(x,y,'#e9dfff',Math.max(1,r*0.16), r*1.9, r*0.6, rr(-0.5,0.5)) ]; }
+  function gComet(x,y,w){ const ang=rr(0,6.28), len=w*rr(6,10), ex=x+Math.cos(ang)*len, ey=y+Math.sin(ang)*len, col=gpick(['#7fc4ff','#ffd23f','#c77dff']);
+    return [ gI(col, w*0.8, [{x:ex,y:ey,w:w*0.08},{x,y,w:w*1.0}]), gDot(x,y,w*1.0,'#fff3b0') ]; }
+  function generateGalaxy(stroke){
+    const pts=stroke.pts, items=[]; if(!pts.length) return items;
+    const w=stroke.size||6/cam.scale; let total=0; for(let i=1;i<pts.length;i++) total+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+    const NEB=['#cbb8ff','#ffc9e6','#bcd8ff','#d9c9ff'], STAR=['#ffd23f','#ff6f9c','#4db6ff','#9a5bff','#ff8c42','#ffe08a'], PLANET=['#e0503a','#4db6ff','#ffb347','#9a5bff','#57b46a','#ff6f9c'];
+    const n=clamp(Math.floor(total/(w*4.2)),4,22);
+    for(let k=0;k<=n;k++){ const f=n?k/n:0.5, P=samplePath(pts,f);
+      if(Math.random()<0.8) items.push(gDot(P.x+rr(-w*3,w*3), P.y+rr(-w*3,w*3), w*rr(2,4.5), gpick(NEB)));
+      const nstar=1+(Math.random()<0.55?1:0);
+      for(let s2=0;s2<nstar;s2++){ const sx=P.x+rr(-w*5,w*5), sy=P.y+rr(-w*5,w*5);
+        if(Math.random()<0.42) items.push(...gStar(sx,sy,w*rr(1.2,2.2),gpick(STAR))); else items.push(gDot(sx,sy,w*rr(0.5,1.2),gpick(STAR))); }
+      if(Math.random()<0.2)  items.push(...gPlanet(P.x+rr(-w*4,w*4), P.y+rr(-w*4,w*4), w*rr(2.2,3.6), gpick(PLANET)));
+      if(Math.random()<0.12) items.push(...gComet(P.x,P.y,w));
+    }
+    return items;
+  }
+  function gFish(x,y,w,col){ const dir=Math.random()<0.5?1:-1, s=w*rr(2,3.2);
+    return [ gI(col, s, [{x:x-s*dir,y,w:s*0.18},{x,y,w:s*1.05},{x:x+s*0.9*dir,y,w:s*0.3}]),
+      gI(col, s*0.6, [{x:x-s*0.9*dir,y,w:s*0.5},{x:x-s*1.7*dir,y:y-s*0.55,w:s*0.12}]),
+      gI(col, s*0.6, [{x:x-s*0.9*dir,y,w:s*0.5},{x:x-s*1.7*dir,y:y+s*0.55,w:s*0.12}]),
+      gDot(x+s*0.55*dir, y-s*0.12, s*0.16, '#26262e') ]; }
+  function gBubbles(x,y,w){ const out=[], col='#8fcdea', n=3+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++){ const bx=x+rr(-w,w), by=y-i*w*1.5, r=w*rr(0.5,1.0); out.push(gRing(bx,by,col,Math.max(1,r*0.3),r,r,0)); } return out; }
+  function gSeaweed(x,y,w){ const h=w*rr(5,9), col=gpick(['#2f8f49','#3fae62','#1f9e7a']), pts=[];
+    for(let i=0;i<=10;i++){ const t=i/10; pts.push({x:x+Math.sin(t*9+Math.random())*w*1.1, y:y-h*t, w:w*(0.5-0.35*t)}); }
+    return [gI(col,w*0.5,pts)]; }
+  function gCoral(x,y,w){ const col=gpick(['#ff6f9c','#ff8c42','#c77dff','#e0503a']);
+    return [ gI(col,w*0.6,[{x,y,w:w*0.7},{x,y:y-w*3,w:w*0.25}]),
+      gI(col,w*0.5,[{x,y:y-w*1.2,w:w*0.5},{x:x-w*1.8,y:y-w*3.2,w:w*0.15}]),
+      gI(col,w*0.5,[{x,y:y-w*1.6,w:w*0.5},{x:x+w*1.8,y:y-w*3.6,w:w*0.15}]) ]; }
+  function gStarfish(x,y,w){ const col=gpick(['#ff8c42','#ff6f9c','#e0503a']), out=[], r=w*rr(1.5,2.2);
+    for(let i=0;i<5;i++){ const a=-1.5708 + i/5*6.2832; out.push(gI(col,r*0.7,[{x,y,w:r*0.6},{x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,w:r*0.18}])); }
+    out.push(gDot(x,y,r*0.5,col)); return out; }
+  function gShell(x,y,w){ const col=gpick(['#ffb3c6','#ffd7a1','#ffd23f']), out=[], r=w*2;
+    for(let i=0;i<4;i++){ const a=-1.5708 + (i-1.5)*0.42; out.push(gI(col,w*0.5,[{x,y,w:w*0.18},{x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,w:w*0.7}])); }
+    out.push(gDot(x,y,w*0.35,col)); return out; }
+  function generateOcean(stroke){
+    const pts=stroke.pts, items=[]; if(!pts.length) return items;
+    const w=stroke.size||6/cam.scale; let total=0; for(let i=1;i<pts.length;i++) total+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+    const FISH=['#ff8c42','#ffd23f','#ff6f9c','#4db6ff','#e0503a','#57b46a','#c77dff'];
+    const n=clamp(Math.floor(total/(w*5.2)),4,18);
+    for(let k=0;k<=n;k++){ const f=n?k/n:0.5, P=samplePath(pts,f), q=Math.random();
+      if(q<0.34) items.push(...gFish(P.x,P.y,w,gpick(FISH)));
+      else if(q<0.56) items.push(...gBubbles(P.x,P.y,w));
+      else if(q<0.72) items.push(...gSeaweed(P.x,P.y,w));
+      else if(q<0.84) items.push(...gCoral(P.x,P.y,w));
+      else if(q<0.93) items.push(...gStarfish(P.x,P.y,w));
+      else items.push(...gShell(P.x,P.y,w));
+    }
+    return items;
+  }
+
+  // gentle drifting sprites (critters / sparkles / bubbles) rise from a finished stroke
+  function critterBurst(sx, sy, kinds, fireflies){
     if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const kinds=['🦋','🐝','🐞','🐦','🌸'], n=1+Math.floor(Math.random()*2);
+    kinds = kinds || ['🦋','🐝','🐞','🐦','🌸']; fireflies = fireflies!==false;
+    const n=1+Math.floor(Math.random()*2);
     for(let i=0;i<n;i++){ const el=document.createElement('span'); el.className='critter'; el.textContent=kinds[Math.floor(Math.random()*kinds.length)];
       el.style.left=sx+'px'; el.style.top=sy+'px';
       const ang=-Math.PI/2+(Math.random()-0.5)*1.3, dist=55+Math.random()*80;
@@ -819,15 +896,14 @@
       el.style.setProperty('--cy',(Math.sin(ang)*dist-24).toFixed(0)+'px');
       el.style.animationDelay=(i*0.12)+'s';
       document.body.appendChild(el); setTimeout(()=>el.remove(), 2400); }
-    // soft glowing fireflies drift out — the magical atmosphere
-    const f=2+Math.floor(Math.random()*2);
-    for(let i=0;i<f;i++){ const el=document.createElement('span'); el.className='firefly';
-      el.style.left=sx+'px'; el.style.top=sy+'px';
-      const ang=Math.random()*Math.PI*2, dist=40+Math.random()*90;
-      el.style.setProperty('--fx',(Math.cos(ang)*dist).toFixed(0)+'px');
-      el.style.setProperty('--fy',(Math.sin(ang)*dist-40).toFixed(0)+'px');
-      el.style.animationDelay=(Math.random()*0.5).toFixed(2)+'s';
-      document.body.appendChild(el); setTimeout(()=>el.remove(), 4400); }
+    if(fireflies){ const f=2+Math.floor(Math.random()*2);
+      for(let i=0;i<f;i++){ const el=document.createElement('span'); el.className='firefly';
+        el.style.left=sx+'px'; el.style.top=sy+'px';
+        const ang=Math.random()*Math.PI*2, dist=40+Math.random()*90;
+        el.style.setProperty('--fx',(Math.cos(ang)*dist).toFixed(0)+'px');
+        el.style.setProperty('--fy',(Math.sin(ang)*dist-40).toFixed(0)+'px');
+        el.style.animationDelay=(Math.random()*0.5).toFixed(2)+'s';
+        document.body.appendChild(el); setTimeout(()=>el.remove(), 4400); } }
   }
 
   /* ---------------- symmetry (mandala) ---------------- */
@@ -1965,10 +2041,10 @@
   /* ---------------- Magic garden sprout animation ----------------
      The stem shows instantly; leaves and the flower scale up in a gentle stagger so
      you actually watch the plant grow. Committed as one undoable op. */
-  function animateGarden(items){
+  function animateGarden(items, from){
     for(const s of strokes){ if(s._grow) delete s._grow; }              // snap any earlier sprout to finished (no half-scaled leftovers)
     if(matchMedia('(prefers-reduced-motion: reduce)').matches){ invalidate(); return; }
-    const decos=items.slice(1); if(!decos.length){ invalidate(); return; }
+    const decos=items.slice(from==null?1:from); if(!decos.length){ invalidate(); return; }
     const now=performance.now(), stag=Math.min(58, 900/Math.max(1,decos.length));
     decos.forEach((it,i)=>{ const a=it.pts&&it.pts[0]; if(a) it._grow={ t0:now+i*stag, dur:340, ax:a.x, ay:a.y }; });
     cancelAnimationFrame(gardenRAF);
@@ -2126,13 +2202,13 @@
 
   /* ---------------- What's new (shown once after an update) ---------------- */
   const whatsnew=document.getElementById('whatsnew');
-  const APP_VER='wow-3';
+  const APP_VER='wow-4';
   const WN_ITEMS=[
-    '🌱 A livelier Magic Garden — flowers, trees & fireflies',
+    '🌌 New Galaxy & 🌊 Ocean brushes — paint whole worlds',
+    '🌱 A livelier Magic Garden with fireflies',
     '🏆 Earn badges as you create',
     '🖊️ Save your favourite pens (My pens)',
     '🎨 Lots more stickers to collect',
-    '🎵 Simpler music — record or upload your own',
     '✨ A cleaner, gentler start',
   ];
   function showWhatsNew(){ const list=document.getElementById('wnList');
