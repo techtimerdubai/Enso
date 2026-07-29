@@ -1501,7 +1501,6 @@
     else if(a==='install') doInstall();
     else if(a==='layers') openLayers();
     else if(a==='glow') toggleGlow();
-    else if(a==='living') toggleLiving();
     else if(a==='zen') toggleZen();
     else if(a==='garden'){ selectTool('garden'); toast('🌱 Draw a stem — watch it grow!'); }
     else if(a==='sing') startSing();
@@ -1845,6 +1844,40 @@
 
   // click on modal backdrop closes it
   [sealModal, stickerModal, brushModal].forEach(m=>m.addEventListener('click', e=>{ if(e.target===m) m.classList.add('hidden'); }));
+
+  /* ---------------- modal focus management (a11y) ----------------
+     When a .modal dialog opens, move keyboard focus into it and trap Tab within
+     it; on close, restore focus to whatever opened it (or the menu button).
+     Esc already closes overlays (see keydown handler). Driven by a class observer
+     so every existing open/close path is covered without touching each one. */
+  (function(){
+    const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const vis=el=>el.getClientRects().length>0;
+    const items=card=>[...card.querySelectorAll(FOCUSABLE)].filter(vis);
+    function show(modal){
+      const card=modal.querySelector('.modal-card')||modal;
+      modal._lastFocus=document.activeElement;
+      const f=items(card), target=f[0]||card;
+      if(target===card && !card.hasAttribute('tabindex')) card.setAttribute('tabindex','-1');
+      setTimeout(()=>{ try{ target.focus({preventScroll:true}); }catch(e){} },30);
+      modal._trap=e=>{ if(e.key!=='Tab') return; const list=items(card); if(!list.length) return;
+        const first=list[0], last=list[list.length-1];
+        if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } };
+      modal.addEventListener('keydown', modal._trap);
+    }
+    function hide(modal){
+      if(modal._trap){ modal.removeEventListener('keydown', modal._trap); modal._trap=null; }
+      const lf=modal._lastFocus; modal._lastFocus=null;
+      if(lf && document.contains(lf) && vis(lf)){ try{ lf.focus({preventScroll:true}); return; }catch(e){} }
+      const mb=document.getElementById('menuBtn'); if(mb){ try{ mb.focus({preventScroll:true}); }catch(e){} }
+    }
+    document.querySelectorAll('.modal').forEach(modal=>{
+      let wasHidden=modal.classList.contains('hidden');
+      new MutationObserver(()=>{ const h=modal.classList.contains('hidden'); if(h===wasHidden) return; wasHidden=h; h?hide(modal):show(modal); })
+        .observe(modal,{attributes:true,attributeFilter:['class']});
+    });
+  })();
 
   /* ---------------- keyboard ---------------- */
   addEventListener('keydown', e=>{
@@ -2441,37 +2474,6 @@
     o.fillText(txt, cx+ringR+gap, cy+s*0.04); o.restore();
   }
 
-  /* ---------------- Living canvas — gentle ambient fireflies ----------------
-     A screen-only layer of slow-drifting glowing motes so any drawing feels alive.
-     CSS-animated (GPU-composited, no main-thread cost); never captured in exports. */
-  const ambientEl=document.getElementById('ambient');
-  const LIVING_KEY='enso.living';
-  let living=(()=>{ try{ return localStorage.getItem(LIVING_KEY)!=='0'; }catch(e){ return true; } })();
-  const AMB_COLS=['255,220,120','255,236,175','185,212,255','226,190,255','255,192,220'];
-  function buildAmbient(){
-    if(!ambientEl) return; ambientEl.innerHTML='';
-    document.body.classList.toggle('no-ambient', !living);
-    if(!living || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    for(let i=0;i<12;i++){
-      const el=document.createElement('span'); el.className='amote';
-      const big=Math.random()<0.35, sz=big?(5+Math.random()*4):(2+Math.random()*2), col=AMB_COLS[Math.floor(Math.random()*AMB_COLS.length)];
-      el.style.left=(Math.random()*100)+'%'; el.style.top=(Math.random()*100)+'%';
-      el.style.width=sz+'px'; el.style.height=sz+'px';
-      el.style.background='radial-gradient(circle, rgba('+col+',1) 0%, rgba('+col+',.6) 45%, rgba('+col+',0) 72%)';
-      el.style.boxShadow='0 0 '+(sz*1.7).toFixed(0)+'px rgba('+col+',.7)';
-      el.style.setProperty('--ax',(30+Math.random()*90).toFixed(0)+'px');
-      el.style.setProperty('--ay',(25+Math.random()*80).toFixed(0)+'px');
-      el.style.setProperty('--d',(22+Math.random()*22).toFixed(0)+'s');
-      el.style.setProperty('--t',(3.5+Math.random()*4).toFixed(1)+'s');
-      el.style.setProperty('--dl',(-Math.random()*20).toFixed(1)+'s');
-      el.style.setProperty('--dl2',(-Math.random()*5).toFixed(1)+'s');
-      el.style.setProperty('--omin',(0.05+Math.random()*0.1).toFixed(2));
-      el.style.setProperty('--omax',(big?0.85:0.5).toFixed(2));
-      ambientEl.appendChild(el);
-    }
-  }
-  function toggleLiving(){ living=!living; try{ localStorage.setItem(LIVING_KEY, living?'1':'0'); }catch(e){}
-    buildAmbient(); toast(living?'✨ Living canvas on':'Living canvas off'); buzz(6); }
 
   /* ---------------- Flipbook — frame-by-frame animation ----------------
      Each frame is its own set of strokes (drawn with any brush). Onion-skin shows the
@@ -2535,7 +2537,7 @@
   /* ---------------- boot ---------------- */
   load(); gridRebuild(); selectTool(state.tool); setPalette(state.palette); setPaper(state.paper); setAccent(state.accent);
   if(state.glow) document.body.classList.add('glowroom');
-  updateHud(); buildAmbient();
+  updateHud();
   // Onboarding: first run plays the capability-reel intro (what Ensō can do); the guided tour
   // stays available via Menu → Tour. Returning users fall through to what's-new / install prompt.
   if(!maybeShowIntro()){ if(!maybeTour()){ if(!maybeWhatsNew()) maybeShowAppPrompt(); } }
